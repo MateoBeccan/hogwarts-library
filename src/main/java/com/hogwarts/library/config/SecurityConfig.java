@@ -58,25 +58,11 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // =========================================
-                        // ENDPOINTS PÚBLICOS
-                        // =========================================
-
                         .requestMatchers("/api/auth/**")
                         .permitAll()
 
-
-                        // =========================================
-                        // ADMINISTRACIÓN DE USUARIOS
-                        // =========================================
-
                         .requestMatchers("/api/usuarios/**")
                         .hasRole("ADMIN")
-
-
-                        // =========================================
-                        // OPERACIONES SOLO ADMIN
-                        // =========================================
 
                         .requestMatchers(
                                 HttpMethod.DELETE,
@@ -86,11 +72,12 @@ public class SecurityConfig {
                         )
                         .hasRole("ADMIN")
 
-
-                        // =========================================
-                        // OPERACIONES DE LA BIBLIOTECA
-                        // ADMIN y EMPLEADO
-                        // =========================================
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/clientes/*/reactivar",
+                                "/api/libros/*/reactivar"
+                        )
+                        .hasRole("ADMIN")
 
                         .requestMatchers(
                                 "/api/categorias/**",
@@ -102,8 +89,6 @@ public class SecurityConfig {
                         )
                         .hasAnyRole("ADMIN", "EMPLEADO")
 
-
-                        // Todo lo demás requiere autenticación
                         .anyRequest()
                         .authenticated()
                 )

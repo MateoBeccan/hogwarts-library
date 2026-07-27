@@ -301,4 +301,89 @@ class PagoServiceImplTest {
         verifyNoInteractions(pagoRepository);
         verifyNoInteractions(pagoMapper);
     }
+
+    @Test
+    void registrar_deberiaPermitirPagoCuandoAlquilerEstaFinalizadoYTieneDeuda() {
+
+        alquiler.setEstado(EstadoAlquiler.FINALIZADO);
+
+        PagoRequest request = new PagoRequest(
+                1L,
+                new BigDecimal("5000.00"),
+                MetodoPago.TRANSFERENCIA,
+                "Pago posterior a devolución"
+        );
+
+        when(alquilerRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(alquiler));
+
+        // Total = 30000
+        // Pagado = 20000
+        // Saldo = 10000
+        when(pagoRepository.calcularTotalPagado(1L))
+                .thenReturn(new BigDecimal("20000.00"));
+
+        Pago pago = new Pago();
+        pago.setAlquiler(alquiler);
+        pago.setMonto(new BigDecimal("5000.00"));
+        pago.setMetodoPago(MetodoPago.TRANSFERENCIA);
+        pago.setObservaciones("Pago posterior a devolución");
+
+        when(pagoMapper.toEntity(request, alquiler))
+                .thenReturn(pago);
+
+        when(pagoRepository.save(any(Pago.class)))
+                .thenAnswer(invocation -> {
+
+                    Pago pagoGuardado =
+                            invocation.getArgument(0);
+
+                    pagoGuardado.setId(20L);
+
+                    return pagoGuardado;
+                });
+
+        PagoResponse response = new PagoResponse(
+                20L,
+                1L,
+                LocalDateTime.now(),
+                new BigDecimal("5000.00"),
+                MetodoPago.TRANSFERENCIA,
+                "Pago posterior a devolución",
+                new BigDecimal("30000.00"),
+                new BigDecimal("25000.00"),
+                new BigDecimal("5000.00")
+        );
+
+        when(
+                pagoMapper.toResponse(
+                        any(Pago.class),
+                        eq(new BigDecimal("25000.00"))
+                )
+        ).thenReturn(response);
+
+        PagoResponse resultado =
+                pagoService.registrar(request);
+
+        assertNotNull(resultado);
+
+        assertEquals(
+                new BigDecimal("25000.00"),
+                resultado.totalPagado()
+        );
+
+        assertEquals(
+                new BigDecimal("5000.00"),
+                resultado.saldoPendiente()
+        );
+
+        verify(alquilerRepository)
+                .findByIdForUpdate(1L);
+
+        verify(pagoRepository)
+                .calcularTotalPagado(1L);
+
+        verify(pagoRepository)
+                .save(any(Pago.class));
+    }
 }

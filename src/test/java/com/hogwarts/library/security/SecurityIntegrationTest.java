@@ -11,6 +11,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -161,4 +162,34 @@ class SecurityIntegrationTest {
                 )
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void reactivarCliente_conTokenEmpleado_deberiaRetornar403()
+            throws Exception {
+
+        mockMvc.perform(
+                        patch("/api/clientes/999999/reactivar")
+                                .header(
+                                        "Authorization",
+                                        "Bearer " + empleadoToken
+                                )
+                )
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403));
+    }
+
+    @Test
+    void reactivarCliente_conTokenAdmin_deberiaSuperarSeguridad()
+            throws Exception {
+
+        mockMvc.perform(
+                        patch("/api/clientes/999999/reactivar")
+                                .header(
+                                        "Authorization",
+                                        "Bearer " + adminToken
+                                )
+                )
+                .andExpect(status().isNotFound());
+    }
+
 }

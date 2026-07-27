@@ -1,18 +1,22 @@
 package com.hogwarts.library.config;
 
-import org.springframework.context.annotation.Profile;
 import com.hogwarts.library.domain.Usuario;
 import com.hogwarts.library.domain.enums.RolUsuario;
 import com.hogwarts.library.repository.UsuarioRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("!test")
+@Profile("dev")
 public class DataInitializer {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(DataInitializer.class);
 
     @Bean
     CommandLineRunner crearUsuariosIniciales(
@@ -37,7 +41,7 @@ public class DataInitializer {
 
                 usuarioRepository.save(admin);
 
-                System.out.println(
+                log.info(
                         "Usuario administrador inicial creado"
                 );
             }
@@ -57,7 +61,7 @@ public class DataInitializer {
 
                 usuarioRepository.save(empleado);
 
-                System.out.println(
+                log.info(
                         "Usuario empleado inicial creado"
                 );
             }

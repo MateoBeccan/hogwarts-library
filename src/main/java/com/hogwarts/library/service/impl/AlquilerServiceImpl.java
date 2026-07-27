@@ -22,10 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+
 
 @Service
 @Transactional
@@ -172,7 +170,7 @@ public class AlquilerServiceImpl implements AlquilerService {
     @Override
     public AlquilerResponse finalizar(Long id) {
 
-        Alquiler alquiler = buscarEntidadPorId(id);
+        Alquiler alquiler = buscarEntidadPorIdConLock(id);
 
         if (alquiler.getEstado() != EstadoAlquiler.ACTIVO) {
             throw new BusinessException(
@@ -200,7 +198,7 @@ public class AlquilerServiceImpl implements AlquilerService {
     @Override
     public AlquilerResponse cancelar(Long id) {
 
-        Alquiler alquiler = buscarEntidadPorId(id);
+        Alquiler alquiler = buscarEntidadPorIdConLock(id);
 
         if (alquiler.getEstado() != EstadoAlquiler.ACTIVO) {
             throw new BusinessException(
@@ -356,4 +354,14 @@ public class AlquilerServiceImpl implements AlquilerService {
 
         return valor.trim();
     }
+
+    private Alquiler buscarEntidadPorIdConLock(Long id) {
+        return alquilerRepository.findByIdForUpdate(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "No existe un alquiler con id: " + id
+                        )
+                );
+    }
+
 }

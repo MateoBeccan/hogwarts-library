@@ -1,0 +1,463 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 001-create-categoria
+      author: mateo
+      changes:
+        - createTable:
+            tableName: categoria
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: activa
+                  type: BIT
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: descripcion
+                  type: VARCHAR(500)
+              - column:
+                  name: nombre
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: categoria
+            columnNames: nombre
+            constraintName: uk_categoria_nombre
+
+  - changeSet:
+      id: 002-create-cliente
+      author: mateo
+      changes:
+        - createTable:
+            tableName: cliente
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: activo
+                  type: BIT
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: apellido
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: dni
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email
+                  type: VARCHAR(150)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: fecha_registro
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: nombre
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: telefono
+                  type: VARCHAR(30)
+        - addUniqueConstraint:
+            tableName: cliente
+            columnNames: dni
+            constraintName: uk_cliente_dni
+
+  - changeSet:
+      id: 003-create-libro
+      author: mateo
+      changes:
+        - createTable:
+            tableName: libro
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: activo
+                  type: BIT
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: anio_publicacion
+                  type: INT
+              - column:
+                  name: autor
+                  type: VARCHAR(150)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: descripcion
+                  type: VARCHAR(1000)
+              - column:
+                  name: editorial
+                  type: VARCHAR(150)
+              - column:
+                  name: isbn
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: titulo
+                  type: VARCHAR(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: categoria_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+
+        - addUniqueConstraint:
+            tableName: libro
+            columnNames: isbn
+            constraintName: uk_libro_isbn
+
+        - addForeignKeyConstraint:
+            baseTableName: libro
+            baseColumnNames: categoria_id
+            referencedTableName: categoria
+            referencedColumnNames: id
+            constraintName: fk_libro_categoria
+
+        - createIndex:
+            tableName: libro
+            indexName: fk_libro_categoria
+            columns:
+              - column:
+                  name: categoria_id
+
+  - changeSet:
+      id: 004-create-ejemplar
+      author: mateo
+      changes:
+        - createTable:
+            tableName: ejemplar
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: codigo
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: estado
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: fecha_alta
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: observaciones
+                  type: VARCHAR(500)
+              - column:
+                  name: precio_dia
+                  type: DECIMAL(10,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: libro_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+
+        - addUniqueConstraint:
+            tableName: ejemplar
+            columnNames: codigo
+            constraintName: uk_ejemplar_codigo
+
+        - addForeignKeyConstraint:
+            baseTableName: ejemplar
+            baseColumnNames: libro_id
+            referencedTableName: libro
+            referencedColumnNames: id
+            constraintName: fk_ejemplar_libro
+
+        - createIndex:
+            tableName: ejemplar
+            indexName: fk_ejemplar_libro
+            columns:
+              - column:
+                  name: libro_id
+
+        - createIndex:
+            tableName: ejemplar
+            indexName: idx_ejemplar_estado
+            columns:
+              - column:
+                  name: estado
+
+  - changeSet:
+      id: 005-create-alquiler
+      author: mateo
+      changes:
+        - createTable:
+            tableName: alquiler
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: estado
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: fecha_alquiler
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: fecha_devolucion
+                  type: DATE
+              - column:
+                  name: fecha_vencimiento
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: observaciones
+                  type: VARCHAR(500)
+              - column:
+                  name: total
+                  type: DECIMAL(12,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cliente_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+
+        - addForeignKeyConstraint:
+            baseTableName: alquiler
+            baseColumnNames: cliente_id
+            referencedTableName: cliente
+            referencedColumnNames: id
+            constraintName: fk_alquiler_cliente
+
+        - createIndex:
+            tableName: alquiler
+            indexName: idx_alquiler_estado
+            columns:
+              - column:
+                  name: estado
+
+        - createIndex:
+            tableName: alquiler
+            indexName: idx_alquiler_cliente_estado
+            columns:
+              - column:
+                  name: cliente_id
+              - column:
+                  name: estado
+
+  - changeSet:
+      id: 006-create-detalle-alquiler
+      author: mateo
+      changes:
+        - createTable:
+            tableName: detalle_alquiler
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: cantidad_dias
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: precio_dia
+                  type: DECIMAL(10,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: subtotal
+                  type: DECIMAL(12,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: alquiler_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: ejemplar_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+
+        - addUniqueConstraint:
+            tableName: detalle_alquiler
+            columnNames: alquiler_id, ejemplar_id
+            constraintName: uk_detalle_alquiler_ejemplar
+
+        - addForeignKeyConstraint:
+            baseTableName: detalle_alquiler
+            baseColumnNames: alquiler_id
+            referencedTableName: alquiler
+            referencedColumnNames: id
+            constraintName: fk_detalle_alquiler
+
+        - addForeignKeyConstraint:
+            baseTableName: detalle_alquiler
+            baseColumnNames: ejemplar_id
+            referencedTableName: ejemplar
+            referencedColumnNames: id
+            constraintName: fk_detalle_ejemplar
+
+        - createIndex:
+            tableName: detalle_alquiler
+            indexName: fk_detalle_ejemplar
+            columns:
+              - column:
+                  name: ejemplar_id
+
+  - changeSet:
+      id: 007-create-pago
+      author: mateo
+      changes:
+        - createTable:
+            tableName: pago
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: fecha
+                  type: DATETIME(6)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: metodo_pago
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: monto
+                  type: DECIMAL(12,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: observaciones
+                  type: VARCHAR(500)
+              - column:
+                  name: alquiler_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+
+        - addForeignKeyConstraint:
+            baseTableName: pago
+            baseColumnNames: alquiler_id
+            referencedTableName: alquiler
+            referencedColumnNames: id
+            constraintName: fk_pago_alquiler
+
+        - createIndex:
+            tableName: pago
+            indexName: fk_pago_alquiler
+            columns:
+              - column:
+                  name: alquiler_id
+
+  - changeSet:
+      id: 008-create-usuario
+      author: mateo
+      changes:
+        - createTable:
+            tableName: usuario
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: activo
+                  type: BIT
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: apellido
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: nombre
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: password
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rol
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: username
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+
+        - addUniqueConstraint:
+            tableName: usuario
+            columnNames: username
+            constraintName: uk_usuario_username

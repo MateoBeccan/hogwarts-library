@@ -20,6 +20,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -298,7 +299,8 @@ class AlquilerServiceImplTest {
     @Test
     void finalizar_deberiaLanzarExcepcionCuandoAlquilerNoExiste() {
 
-        when(alquilerRepository.findById(999L))
+
+        when(alquilerRepository.findByIdForUpdate(999L))
                 .thenReturn(Optional.empty());
 
         ResourceNotFoundException exception = assertThrows(
@@ -321,7 +323,7 @@ class AlquilerServiceImplTest {
         alquiler.setId(1L);
         alquiler.setEstado(EstadoAlquiler.FINALIZADO);
 
-        when(alquilerRepository.findById(1L))
+        when(alquilerRepository.findByIdForUpdate(1L))
                 .thenReturn(Optional.of(alquiler));
 
         BusinessException exception = assertThrows(
@@ -337,5 +339,235 @@ class AlquilerServiceImplTest {
         verify(alquilerRepository, never())
                 .save(any(Alquiler.class));
     }
+
+    @Test
+    void finalizar_deberiaBuscarAlquilerConLockPesimista() {
+
+        Alquiler alquiler = new Alquiler();
+        alquiler.setId(1L);
+        alquiler.setEstado(EstadoAlquiler.ACTIVO);
+        alquiler.setDetalles(new ArrayList<>());
+
+        when(alquilerRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(alquiler));
+
+        when(alquilerRepository.save(any(Alquiler.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(alquilerMapper.toResponse(any(Alquiler.class)))
+                .thenReturn(mock(AlquilerResponse.class));
+
+        alquilerService.finalizar(1L);
+
+        verify(alquilerRepository)
+                .findByIdForUpdate(1L);
+
+        verify(alquilerRepository, never())
+                .findById(1L);
+    }
+    @Test
+    void crear_deberiaRechazarAlquilerCuandoLibroEstaInactivo() {
+
+        ejemplar1.getLibro().setActivo(false);
+
+        AlquilerRequest request = new AlquilerRequest(
+                1L,
+                LocalDate.now().plusDays(7),
+                List.of(1L),
+                null
+        );
+
+        when(clienteRepository.findById(1L))
+                .thenReturn(Optional.of(cliente));
+
+        when(ejemplarRepository.findAllByIdForUpdate(List.of(1L)))
+                .thenReturn(List.of(ejemplar1));
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> alquilerService.crear(request)
+        );
+
+        assertEquals(
+                "El libro asociado al ejemplar HOG-000001 está inactivo",
+                exception.getMessage()
+        );
+
+        verify(alquilerRepository, never())
+                .save(any(Alquiler.class));
+
+        assertEquals(
+                EstadoEjemplar.DISPONIBLE,
+                ejemplar1.getEstado()
+        );
+    }
+
+    @Test
+    void crear_deberiaLanzarExcepcionCuandoUnoDeLosEjemplaresNoExiste() {
+
+        AlquilerRequest request = new AlquilerRequest(
+                1L,
+                LocalDate.now().plusDays(7),
+                List.of(1L, 999L),
+                null
+        );
+
+        when(clienteRepository.findById(1L))
+                .thenReturn(Optional.of(cliente));
+
+        // Se solicitaron 2 IDs, pero la consulta sólo encontró 1.
+        when(ejemplarRepository.findAllByIdForUpdate(
+                List.of(1L, 999L)
+        ))
+                .thenReturn(List.of(ejemplar1));
+
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> alquilerService.crear(request)
+        );
+
+        assertEquals(
+                "Uno o más ejemplares no existen",
+                exception.getMessage()
+        );
+
+        verify(alquilerRepository, never())
+                .save(any(Alquiler.class));
+
+        assertEquals(
+                EstadoEjemplar.DISPONIBLE,
+                ejemplar1.getEstado()
+        );
+    }
+
+    @Test
+    void finalizar_deberiaFinalizarAlquilerYLiberarEjemplares() {
+
+        ejemplar1.setEstado(EstadoEjemplar.ALQUILADO);
+        ejemplar2.setEstado(EstadoEjemplar.ALQUILADO);
+
+        Alquiler alquiler = new Alquiler();
+        alquiler.setId(1L);
+        alquiler.setEstado(EstadoAlquiler.ACTIVO);
+
+        DetalleAlquiler detalle1 = new DetalleAlquiler();
+        detalle1.setAlquiler(alquiler);
+        detalle1.setEjemplar(ejemplar1);
+
+        DetalleAlquiler detalle2 = new DetalleAlquiler();
+        detalle2.setAlquiler(alquiler);
+        detalle2.setEjemplar(ejemplar2);
+
+        alquiler.setDetalles(
+                new ArrayList<>(
+                        List.of(detalle1, detalle2)
+                )
+        );
+
+        when(alquilerRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(alquiler));
+
+        when(alquilerRepository.save(any(Alquiler.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(alquilerMapper.toResponse(any(Alquiler.class)))
+                .thenReturn(mock(AlquilerResponse.class));
+
+        AlquilerResponse resultado =
+                alquilerService.finalizar(1L);
+
+        assertNotNull(resultado);
+
+        assertEquals(
+                EstadoAlquiler.FINALIZADO,
+                alquiler.getEstado()
+        );
+
+        assertNotNull(
+                alquiler.getFechaDevolucion()
+        );
+
+        assertEquals(
+                LocalDate.now(),
+                alquiler.getFechaDevolucion()
+        );
+
+        assertEquals(
+                EstadoEjemplar.DISPONIBLE,
+                ejemplar1.getEstado()
+        );
+
+        assertEquals(
+                EstadoEjemplar.DISPONIBLE,
+                ejemplar2.getEstado()
+        );
+
+        verify(alquilerRepository)
+                .findByIdForUpdate(1L);
+
+        verify(alquilerRepository)
+                .save(alquiler);
+    }
+    @Test
+    void cancelar_deberiaCancelarAlquilerYLiberarEjemplares() {
+
+        ejemplar1.setEstado(EstadoEjemplar.ALQUILADO);
+        ejemplar2.setEstado(EstadoEjemplar.ALQUILADO);
+
+        Alquiler alquiler = new Alquiler();
+        alquiler.setId(1L);
+        alquiler.setEstado(EstadoAlquiler.ACTIVO);
+
+        DetalleAlquiler detalle1 = new DetalleAlquiler();
+        detalle1.setAlquiler(alquiler);
+        detalle1.setEjemplar(ejemplar1);
+
+        DetalleAlquiler detalle2 = new DetalleAlquiler();
+        detalle2.setAlquiler(alquiler);
+        detalle2.setEjemplar(ejemplar2);
+
+        alquiler.setDetalles(
+                new ArrayList<>(
+                        List.of(detalle1, detalle2)
+                )
+        );
+
+        when(alquilerRepository.findByIdForUpdate(1L))
+                .thenReturn(Optional.of(alquiler));
+
+        when(alquilerRepository.save(any(Alquiler.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(alquilerMapper.toResponse(any(Alquiler.class)))
+                .thenReturn(mock(AlquilerResponse.class));
+
+        AlquilerResponse resultado =
+                alquilerService.cancelar(1L);
+
+        assertNotNull(resultado);
+
+        assertEquals(
+                EstadoAlquiler.CANCELADO,
+                alquiler.getEstado()
+        );
+
+        assertEquals(
+                EstadoEjemplar.DISPONIBLE,
+                ejemplar1.getEstado()
+        );
+
+        assertEquals(
+                EstadoEjemplar.DISPONIBLE,
+                ejemplar2.getEstado()
+        );
+
+        verify(alquilerRepository)
+                .findByIdForUpdate(1L);
+
+        verify(alquilerRepository)
+                .save(alquiler);
+    }
+
+
 
 }
