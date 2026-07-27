@@ -1,5 +1,6 @@
 package com.hogwarts.library.config;
 
+import org.springframework.context.annotation.Profile;
 import com.hogwarts.library.domain.Usuario;
 import com.hogwarts.library.domain.enums.RolUsuario;
 import com.hogwarts.library.repository.UsuarioRepository;
@@ -7,8 +8,10 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
 
-@Configuration
+@Component
+@Profile("!test")
 public class DataInitializer {
 
     @Bean
