@@ -67,3 +67,53 @@ Service
 Repository
    ↓
 Database
+
+Ejecutar el backend
+
+Crear la base de datos:
+
+CREATE DATABASE hogwarts_library_db;
+
+Configurar las variables de entorno:
+
+$env:DB_USERNAME="usuario"
+$env:DB_PASSWORD="contraseña"
+$env:JWT_SECRET="clave-jwt-segura"
+
+Ejecutar:
+
+.\mvnw spring-boot:run
+
+El backend estará disponible en:
+
+http://localhost:8080
+Ejecutar el frontend
+cd frontend
+npm install
+npm run dev
+
+El frontend estará disponible en:
+
+http://localhost:5173
+Tests
+.\mvnw test
+
+
+Versiones
+V1.0.0
+
+Primera versión estable del backend con:
+
+seguridad JWT;
+gestión de catálogo;
+alquileres y devoluciones;
+pagos;
+reglas de negocio;
+pruebas automatizadas;
+esquema versionado con Liquibase.
+Evolución actual
+Frontend completo con Vue 3.
+Dashboard con información real.
+Flujo completo de alquileres y pagos.
+Código automático de ejemplares.
+Mejoras de experiencia de usuario.
