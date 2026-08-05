@@ -36,6 +36,11 @@ Permite administrar clientes, categorías, libros, ejemplares físicos, alquiler
 ### Frontend
 
 - Vue 3
+- TypeScript
+- Vite
+- Pinia
+- Vue Router
+- Axios
 
 ### Testing
 
@@ -67,53 +72,125 @@ Service
 Repository
    ↓
 Database
+```
 
-Ejecutar el backend
+## Instalación
 
-Crear la base de datos:
+### Requisitos previos
 
+Antes de ejecutar el proyecto, asegurarse de tener instalado:
+
+- Java 21
+- MySQL 8
+- Node.js
+- npm
+- Git
+
+### 1. Clonar el repositorio
+
+```bash
+git clone https://github.com/MateoBeccan/hogwarts-library.git
+cd hogwarts-library
+```
+
+### 2. Crear la base de datos
+
+Ingresar a MySQL y ejecutar:
+
+```sql
 CREATE DATABASE hogwarts_library_db;
+```
 
-Configurar las variables de entorno:
+### 3. Configurar variables de entorno
 
+En PowerShell:
+
+```powershell
 $env:DB_USERNAME="usuario"
 $env:DB_PASSWORD="contraseña"
 $env:JWT_SECRET="clave-jwt-segura"
+```
 
-Ejecutar:
+Reemplazar los valores por las credenciales reales del entorno local.
 
+### 4. Ejecutar el backend
+
+Desde la raíz del proyecto:
+
+```powershell
 .\mvnw spring-boot:run
+```
 
 El backend estará disponible en:
 
+```text
 http://localhost:8080
-Ejecutar el frontend
+```
+
+Liquibase aplicará automáticamente las migraciones pendientes al iniciar la aplicación.
+
+### 5. Instalar dependencias del frontend
+
+Abrir otra terminal y ejecutar:
+
+```bash
 cd frontend
 npm install
+```
+
+### 6. Ejecutar el frontend
+
+```bash
 npm run dev
+```
 
 El frontend estará disponible en:
 
+```text
 http://localhost:5173
-Tests
+```
+
+## Ejecutar pruebas
+
+Desde la raíz del proyecto:
+
+```powershell
 .\mvnw test
+```
 
+Estado actual:
 
-Versiones
-V1.0.0
+```text
+Tests run: 45
+Failures: 0
+Errors: 0
+BUILD SUCCESS
+```
+
+## Versiones
+
+### V1.0.0
 
 Primera versión estable del backend con:
 
-seguridad JWT;
-gestión de catálogo;
-alquileres y devoluciones;
-pagos;
-reglas de negocio;
-pruebas automatizadas;
-esquema versionado con Liquibase.
-Evolución actual
-Frontend completo con Vue 3.
-Dashboard con información real.
-Flujo completo de alquileres y pagos.
-Código automático de ejemplares.
-Mejoras de experiencia de usuario.
+- Seguridad JWT.
+- Gestión de catálogo.
+- Alquileres y devoluciones.
+- Pagos.
+- Reglas de negocio.
+- Pruebas automatizadas.
+- Esquema versionado con Liquibase.
+
+### Evolución actual
+
+- Frontend completo con Vue 3.
+- Dashboard con información real.
+- Flujo completo de alquileres y pagos.
+- Código automático de ejemplares.
+- Mejoras de experiencia de usuario.
+
+## Autor
+
+**Mateo Beccan**
+
+Proyecto personal desarrollado para aplicar conocimientos de Java, Spring Boot, bases de datos, seguridad, testing y desarrollo full stack.
