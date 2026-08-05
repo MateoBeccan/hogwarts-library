@@ -188,9 +188,3 @@ Primera versión estable del backend con:
 - Flujo completo de alquileres y pagos.
 - Código automático de ejemplares.
 - Mejoras de experiencia de usuario.
-
-## Autor
-
-**Mateo Beccan**
-
-Proyecto personal desarrollado para aplicar conocimientos de Java, Spring Boot, bases de datos, seguridad, testing y desarrollo full stack.
