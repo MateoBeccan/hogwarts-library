@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(
@@ -30,9 +32,6 @@ public class Libro {
     @Column(nullable = false, length = 200)
     private String titulo;
 
-    @Column(nullable = false, length = 150)
-    private String autor;
-
     @Column(length = 150)
     private String editorial;
 
@@ -52,6 +51,27 @@ public class Libro {
             foreignKey = @ForeignKey(name = "fk_libro_categoria")
     )
     private Categoria categoria;
+
+    @ManyToMany
+    @JoinTable(
+            name = "libro_autor",
+            joinColumns = @JoinColumn(
+                    name = "libro_id",
+                    foreignKey = @ForeignKey(name = "fk_libro_autor_libro")
+            ),
+            inverseJoinColumns = @JoinColumn(
+                    name = "autor_id",
+                    foreignKey = @ForeignKey(name = "fk_libro_autor_autor")
+            ),
+            uniqueConstraints = {
+                    @UniqueConstraint(
+                            name = "uk_libro_autor",
+                            columnNames = {"libro_id", "autor_id"}
+                    )
+            }
+    )
+    @Builder.Default
+    private Set<Autor> autores = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "libro")
     @Builder.Default

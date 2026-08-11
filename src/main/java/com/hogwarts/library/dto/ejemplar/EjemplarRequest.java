@@ -2,7 +2,6 @@ package com.hogwarts.library.dto.ejemplar;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -10,10 +9,6 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
 public record EjemplarRequest(
-
-        @NotBlank(message = "El código del ejemplar es obligatorio")
-        @Size(max = 30, message = "El código no puede superar los 30 caracteres")
-        String codigo,
 
         @NotNull(message = "El precio por día es obligatorio")
         @DecimalMin(

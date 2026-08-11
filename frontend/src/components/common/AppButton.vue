@@ -2,7 +2,7 @@
 withDefaults(
   defineProps<{
     type?: 'button' | 'submit' | 'reset';
-    variant?: 'primary' | 'ghost' | 'subtle';
+    variant?: 'primary' | 'ghost' | 'subtle' | 'danger';
     disabled?: boolean;
     loading?: boolean;
   }>(),

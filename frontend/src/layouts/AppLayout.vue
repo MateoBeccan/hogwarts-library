@@ -1,7 +1,17 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
+import logo from '@/assets/images/hogwarts-library-logo.png';
+import alquileresIcon from '@/assets/images/hogwarts-library-alquileres-logo.png';
+import adminIcon from '@/assets/images/hogwarts-library-admin-logo.png';
+import autorIcon from '@/assets/images/hogwarts-library-autor-logo.png';
+import categoriasIcon from '@/assets/images/hogwarts-library-categorias-logo.png';
+import clientesIcon from '@/assets/images/hogwarts-library-clientes-logo.png';
+import dashboardIcon from '@/assets/images/hogwarts-library-dashboard-logo.png';
+import empleadoIcon from '@/assets/images/hogwarts-library-empleado-logo.png';
+import ejemplaresIcon from '@/assets/images/hogwarts-library-ejemplares-logo.png';
+import librosIcon from '@/assets/images/hogwarts-library-libros-logo.png';
 import AppButton from '@/components/common/AppButton.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import { useAuthStore } from '@/stores/auth.store';
@@ -15,7 +25,7 @@ interface NavigationItem {
   label: string;
   path: string;
   icon: string;
-  disabled?: boolean;
+  iconImage?: string;
 }
 
 interface NavigationGroup {
@@ -26,51 +36,42 @@ interface NavigationGroup {
 const navigationGroups: NavigationGroup[] = [
   {
     label: '',
-    items: [{ label: 'Dashboard', path: '/dashboard', icon: 'D' }],
+    items: [{ label: 'Dashboard', path: '/dashboard', icon: 'D', iconImage: dashboardIcon }],
   },
   {
     label: 'Gestion',
     items: [
-      { label: 'Clientes', path: '#', icon: 'C', disabled: true },
-      { label: 'Categorias', path: '#', icon: 'K', disabled: true },
-      { label: 'Libros', path: '#', icon: 'L', disabled: true },
-      { label: 'Ejemplares', path: '#', icon: 'E', disabled: true },
+      { label: 'Clientes', path: '/clientes', icon: 'C', iconImage: clientesIcon },
+      { label: 'Autores', path: '/autores', icon: 'Au', iconImage: autorIcon },
+      { label: 'Categorias', path: '/categorias', icon: 'K', iconImage: categoriasIcon },
+      { label: 'Libros', path: '/libros', icon: 'L', iconImage: librosIcon },
+      { label: 'Ejemplares', path: '/ejemplares', icon: 'E', iconImage: ejemplaresIcon },
     ],
   },
   {
     label: 'Operaciones',
     items: [
-      { label: 'Alquileres', path: '#', icon: 'A', disabled: true },
-      { label: 'Pagos', path: '#', icon: 'P', disabled: true },
+      { label: 'Alquileres', path: '/alquileres', icon: 'A', iconImage: alquileresIcon },
     ],
   },
 ];
 
 const pageTitle = computed(() => String(route.meta.title ?? 'Hogwarts Library'));
 const breadcrumb = computed(() => String(route.meta.breadcrumb ?? ''));
+const userIcon = computed(() => (authStore.role === 'ADMIN' ? adminIcon : empleadoIcon));
 
 function logout(): void {
   authStore.logout();
   void router.push({ name: 'login' });
-}
-
-function handleDisabledNavigation(event: MouseEvent, disabled?: boolean): void {
-  if (disabled) {
-    event.preventDefault();
-  }
 }
 </script>
 
 <template>
   <div class="app-shell" :class="{ 'app-shell--collapsed': isCollapsed }">
     <aside class="sidebar">
-      <div class="sidebar__brand">
-        <div class="brand-mark">HL</div>
-        <div class="brand-copy">
-          <strong>Hogwarts</strong>
-          <span>Library Management</span>
-        </div>
-      </div>
+      <RouterLink class="sidebar__brand" to="/dashboard" aria-label="Ir al dashboard">
+        <img class="brand-logo" :src="logo" alt="Hogwarts Library" />
+      </RouterLink>
 
       <button class="sidebar__collapse" type="button" @click="isCollapsed = !isCollapsed">
         <span aria-hidden="true">{{ isCollapsed ? '>' : '<' }}</span>
@@ -84,18 +85,20 @@ function handleDisabledNavigation(event: MouseEvent, disabled?: boolean): void {
             v-for="item in group.items"
             :key="item.label"
             class="nav-link"
-            :class="{ 'nav-link--disabled': item.disabled }"
+            :class="{ 'nav-link--image': item.iconImage }"
             :to="item.path"
-            @click="handleDisabledNavigation($event, item.disabled)"
           >
-            <span class="nav-link__icon" aria-hidden="true">{{ item.icon }}</span>
+            <span class="nav-link__icon" :class="{ 'nav-link__icon--image': item.iconImage }" aria-hidden="true">
+              <img v-if="item.iconImage" class="nav-link__image" :src="item.iconImage" alt="" />
+              <span v-else>{{ item.icon }}</span>
+            </span>
             <span>{{ item.label }}</span>
           </RouterLink>
         </section>
       </nav>
 
       <div class="sidebar__user">
-        <div class="avatar">{{ authStore.initials }}</div>
+        <div class="avatar avatar--image"><img :src="userIcon" :alt="`Usuario ${authStore.role ?? ''}`" /></div>
         <div class="user-copy">
           <strong>{{ authStore.username }}</strong>
           <StatusBadge tone="warning">{{ authStore.role }}</StatusBadge>
@@ -115,7 +118,7 @@ function handleDisabledNavigation(event: MouseEvent, disabled?: boolean): void {
             <strong>{{ authStore.username }}</strong>
             <span>{{ authStore.role }}</span>
           </div>
-          <div class="avatar">{{ authStore.initials }}</div>
+          <div class="avatar avatar--image"><img :src="userIcon" :alt="`Usuario ${authStore.role ?? ''}`" /></div>
         </div>
       </header>
 
@@ -125,8 +128,3 @@ function handleDisabledNavigation(event: MouseEvent, disabled?: boolean): void {
     </div>
   </div>
 </template>
-
-
-
-
-

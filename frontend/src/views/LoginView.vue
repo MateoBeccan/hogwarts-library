@@ -1,8 +1,9 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import axios from 'axios';
 import { computed, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
+import loginWallpaper from '@/assets/images/hogwarts-library-login-wallpaper.png';
 import AppButton from '@/components/common/AppButton.vue';
 import AppInput from '@/components/common/AppInput.vue';
 import { useAuthStore } from '@/stores/auth.store';
@@ -63,7 +64,7 @@ async function submit(): Promise<void> {
 </script>
 
 <template>
-  <main class="login-page">
+  <main class="login-page" :style="{ '--login-wallpaper': `url(${loginWallpaper})` }">
     <section class="login-hero" aria-label="Hogwarts Library">
       <div class="shelf-visual" aria-hidden="true">
         <span v-for="item in 18" :key="item" />
@@ -71,7 +72,7 @@ async function submit(): Promise<void> {
       <div class="login-hero__content">
         <p class="eyebrow">Hogwarts Library</p>
         <h1>Library Management System</h1>
-        <p>Gestion inteligente de libros, ejemplares, clientes, alquileres y pagos.</p>
+        <p>Gestión inteligente de libros, ejemplares, clientes, alquileres y pagos.</p>
       </div>
     </section>
 
@@ -91,23 +92,23 @@ async function submit(): Promise<void> {
           id="username"
           v-model="form.username"
           label="Usuario"
-          placeholder="admin"
-          autocomplete="username"
+          placeholder="Ingresa tu usuario"
+          autocomplete="username" autofocus
           :error="fieldErrors.username"
         />
 
         <AppInput
           id="password"
           v-model="form.password"
-          label="Contrasena"
+          label="Contraseña"
           type="password"
-          placeholder="Tu contrasena"
+          placeholder="Ingresa tu contraseña"
           autocomplete="current-password"
           :error="fieldErrors.password"
         />
 
         <AppButton type="submit" :loading="isSubmitting" :disabled="!canSubmit">
-          Iniciar sesion
+          Iniciar sesión
         </AppButton>
       </form>
     </section>

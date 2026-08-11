@@ -1,0 +1,112 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 003-001-create-autor
+      author: mateo
+      changes:
+        - createTable:
+            tableName: autor
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: nombre_completo
+                  type: VARCHAR(150)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: activo
+                  type: BIT
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: autor
+            columnNames: nombre_completo
+            constraintName: uk_autor_nombre_completo
+
+  - changeSet:
+      id: 003-002-create-libro-autor
+      author: mateo
+      changes:
+        - createTable:
+            tableName: libro_autor
+            columns:
+              - column:
+                  name: libro_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: autor_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: libro_autor
+            baseColumnNames: libro_id
+            referencedTableName: libro
+            referencedColumnNames: id
+            constraintName: fk_libro_autor_libro
+        - addForeignKeyConstraint:
+            baseTableName: libro_autor
+            baseColumnNames: autor_id
+            referencedTableName: autor
+            referencedColumnNames: id
+            constraintName: fk_libro_autor_autor
+        - addUniqueConstraint:
+            tableName: libro_autor
+            columnNames: libro_id, autor_id
+            constraintName: uk_libro_autor
+        - createIndex:
+            tableName: libro_autor
+            indexName: idx_libro_autor_autor
+            columns:
+              - column:
+                  name: autor_id
+        - createIndex:
+            tableName: libro_autor
+            indexName: idx_libro_autor_libro
+            columns:
+              - column:
+                  name: libro_id
+
+  - changeSet:
+      id: 003-003-migrate-libro-autores
+      author: mateo
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO autor (nombre_completo, activo)
+              SELECT DISTINCT
+                  CASE
+                      WHEN TRIM(autor) = '' THEN 'Autor sin especificar'
+                      ELSE TRIM(autor)
+                  END,
+                  TRUE
+              FROM libro;
+        - sql:
+            sql: |
+              INSERT INTO libro_autor (libro_id, autor_id)
+              SELECT
+                  l.id,
+                  a.id
+              FROM libro l
+              INNER JOIN autor a
+                  ON a.nombre_completo = CASE
+                      WHEN TRIM(l.autor) = '' THEN 'Autor sin especificar'
+                      ELSE TRIM(l.autor)
+                  END;
+
+  - changeSet:
+      id: 003-004-drop-libro-autor-column
+      author: mateo
+      changes:
+        - dropColumn:
+            tableName: libro
+            columnName: autor

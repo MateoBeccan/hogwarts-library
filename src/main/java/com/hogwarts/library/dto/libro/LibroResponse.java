@@ -1,11 +1,15 @@
 package com.hogwarts.library.dto.libro;
 
+import com.hogwarts.library.dto.autor.AutorResponse;
+
+import java.util.List;
+
 public record LibroResponse(
 
         Long id,
         String isbn,
         String titulo,
-        String autor,
+        List<AutorResponse> autores,
         String editorial,
         Integer anioPublicacion,
         String descripcion,

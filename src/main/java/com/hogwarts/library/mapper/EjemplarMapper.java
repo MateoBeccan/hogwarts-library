@@ -16,7 +16,6 @@ public class EjemplarMapper {
 
         Ejemplar ejemplar = new Ejemplar();
 
-        ejemplar.setCodigo(normalizar(request.codigo()));
         ejemplar.setPrecioDia(request.precioDia());
         ejemplar.setObservaciones(
                 normalizarNullable(request.observaciones())
@@ -48,16 +47,11 @@ public class EjemplarMapper {
             Libro libro
     ) {
 
-        ejemplar.setCodigo(normalizar(request.codigo()));
         ejemplar.setPrecioDia(request.precioDia());
         ejemplar.setObservaciones(
                 normalizarNullable(request.observaciones())
         );
         ejemplar.setLibro(libro);
-    }
-
-    private String normalizar(String valor) {
-        return valor.trim();
     }
 
     private String normalizarNullable(String valor) {

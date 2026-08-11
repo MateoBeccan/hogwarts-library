@@ -1,5 +1,6 @@
 package com.hogwarts.library.service.impl;
 
+import com.hogwarts.library.domain.Autor;
 import com.hogwarts.library.domain.Categoria;
 import com.hogwarts.library.domain.Libro;
 import com.hogwarts.library.dto.libro.LibroRequest;
@@ -8,13 +9,16 @@ import com.hogwarts.library.exception.BusinessException;
 import com.hogwarts.library.exception.DuplicateResourceException;
 import com.hogwarts.library.exception.ResourceNotFoundException;
 import com.hogwarts.library.mapper.LibroMapper;
+import com.hogwarts.library.repository.AutorRepository;
 import com.hogwarts.library.repository.CategoriaRepository;
 import com.hogwarts.library.repository.LibroRepository;
 import com.hogwarts.library.service.LibroService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -22,15 +26,18 @@ public class LibroServiceImpl implements LibroService {
 
     private final LibroRepository libroRepository;
     private final CategoriaRepository categoriaRepository;
+    private final AutorRepository autorRepository;
     private final LibroMapper libroMapper;
 
     public LibroServiceImpl(
             LibroRepository libroRepository,
             CategoriaRepository categoriaRepository,
+            AutorRepository autorRepository,
             LibroMapper libroMapper
     ) {
         this.libroRepository = libroRepository;
         this.categoriaRepository = categoriaRepository;
+        this.autorRepository = autorRepository;
         this.libroMapper = libroMapper;
     }
 
@@ -46,11 +53,11 @@ public class LibroServiceImpl implements LibroService {
         }
 
         Categoria categoria = buscarCategoriaPorId(request.categoriaId());
-
         validarCategoriaActiva(categoria);
 
-        Libro libro = libroMapper.toEntity(request, categoria);
+        Set<Autor> autores = buscarAutoresActivos(request.autorIds());
 
+        Libro libro = libroMapper.toEntity(request, categoria, autores);
         libro.setActivo(true);
 
         Libro guardado = libroRepository.save(libro);
@@ -94,13 +101,15 @@ public class LibroServiceImpl implements LibroService {
         }
 
         Categoria categoria = buscarCategoriaPorId(request.categoriaId());
-
         validarCategoriaActiva(categoria);
+
+        Set<Autor> autores = buscarAutoresActivos(request.autorIds());
 
         libroMapper.updateEntity(
                 libro,
                 request,
-                categoria
+                categoria,
+                autores
         );
 
         Libro actualizado = libroRepository.save(libro);
@@ -124,6 +133,7 @@ public class LibroServiceImpl implements LibroService {
         Libro libro = buscarEntidadPorId(id);
 
         validarCategoriaActiva(libro.getCategoria());
+        libro.getAutores().forEach(this::validarAutorActivo);
 
         libro.setActivo(true);
 
@@ -147,16 +157,48 @@ public class LibroServiceImpl implements LibroService {
         return categoriaRepository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
-                                "No existe una categoría con id: " + id
+                                "No existe una categoria con id: " + id
                         )
                 );
+    }
+
+    private Set<Autor> buscarAutoresActivos(List<Long> autorIds) {
+
+        if (autorIds == null || autorIds.isEmpty()) {
+            throw new BusinessException("Debe seleccionar al menos un autor");
+        }
+
+        Set<Long> idsUnicos = new LinkedHashSet<>(autorIds);
+
+        if (idsUnicos.size() != autorIds.size()) {
+            throw new BusinessException("No se puede asociar el mismo autor mas de una vez al libro");
+        }
+
+        List<Autor> autores = autorRepository.findAllById(idsUnicos);
+
+        if (autores.size() != idsUnicos.size()) {
+            throw new ResourceNotFoundException("Uno o mas autores no existen");
+        }
+
+        autores.forEach(this::validarAutorActivo);
+
+        return new LinkedHashSet<>(autores);
     }
 
     private void validarCategoriaActiva(Categoria categoria) {
 
         if (!Boolean.TRUE.equals(categoria.getActiva())) {
             throw new BusinessException(
-                    "No se puede asociar un libro a una categoría inactiva"
+                    "No se puede asociar un libro a una categoria inactiva"
+            );
+        }
+    }
+
+    private void validarAutorActivo(Autor autor) {
+
+        if (!Boolean.TRUE.equals(autor.getActivo())) {
+            throw new BusinessException(
+                    "No se puede asociar un libro a un autor inactivo"
             );
         }
     }

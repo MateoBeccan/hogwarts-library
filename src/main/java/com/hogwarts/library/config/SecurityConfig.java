@@ -39,11 +39,10 @@ public class SecurityConfig {
 
         http
 
-                // API REST + JWT: no necesitamos CSRF
+
                 .csrf(csrf -> csrf.disable())
 
-                // No mantenemos sesión en el servidor.
-                // Cada request debe traer su JWT.
+
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS
@@ -67,6 +66,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.DELETE,
                                 "/api/categorias/**",
+                                "/api/autores/**",
                                 "/api/clientes/**",
                                 "/api/libros/**"
                         )
@@ -81,6 +81,7 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 "/api/categorias/**",
+                                "/api/autores/**",
                                 "/api/clientes/**",
                                 "/api/libros/**",
                                 "/api/ejemplares/**",
@@ -93,7 +94,7 @@ public class SecurityConfig {
                         .authenticated()
                 )
 
-                // El JWT se procesa antes del filtro estándar
+                // El JWT se procesa antes del filtro estÃ¡ndar
                 // de username/password de Spring Security.
                 .addFilterBefore(
                         jwtAuthenticationFilter,

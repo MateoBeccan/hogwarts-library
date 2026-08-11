@@ -7,6 +7,7 @@ defineProps<{
   placeholder?: string;
   error?: string;
   autocomplete?: string;
+  autofocus?: boolean;
 }>();
 
 defineEmits<{
@@ -25,6 +26,7 @@ defineEmits<{
       :value="modelValue"
       :placeholder="placeholder"
       :autocomplete="autocomplete"
+      :autofocus="autofocus"
       @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
     />
     <span v-if="error" class="field__error">{{ error }}</span>

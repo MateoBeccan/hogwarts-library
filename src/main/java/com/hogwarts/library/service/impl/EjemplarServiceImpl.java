@@ -6,7 +6,6 @@ import com.hogwarts.library.domain.enums.EstadoEjemplar;
 import com.hogwarts.library.dto.ejemplar.EjemplarRequest;
 import com.hogwarts.library.dto.ejemplar.EjemplarResponse;
 import com.hogwarts.library.exception.BusinessException;
-import com.hogwarts.library.exception.DuplicateResourceException;
 import com.hogwarts.library.exception.ResourceNotFoundException;
 import com.hogwarts.library.mapper.EjemplarMapper;
 import com.hogwarts.library.repository.EjemplarRepository;
@@ -25,27 +24,22 @@ public class EjemplarServiceImpl implements EjemplarService {
     private final EjemplarRepository ejemplarRepository;
     private final LibroRepository libroRepository;
     private final EjemplarMapper ejemplarMapper;
+    private final EjemplarCodigoGenerator ejemplarCodigoGenerator;
 
     public EjemplarServiceImpl(
             EjemplarRepository ejemplarRepository,
             LibroRepository libroRepository,
-            EjemplarMapper ejemplarMapper
+            EjemplarMapper ejemplarMapper,
+            EjemplarCodigoGenerator ejemplarCodigoGenerator
     ) {
         this.ejemplarRepository = ejemplarRepository;
         this.libroRepository = libroRepository;
         this.ejemplarMapper = ejemplarMapper;
+        this.ejemplarCodigoGenerator = ejemplarCodigoGenerator;
     }
 
     @Override
     public EjemplarResponse crear(EjemplarRequest request) {
-
-        String codigo = request.codigo().trim();
-
-        if (ejemplarRepository.existsByCodigo(codigo)) {
-            throw new DuplicateResourceException(
-                    "Ya existe un ejemplar con código: " + codigo
-            );
-        }
 
         Libro libro = buscarLibroPorId(request.libroId());
 
@@ -56,6 +50,7 @@ public class EjemplarServiceImpl implements EjemplarService {
                 libro
         );
 
+        ejemplar.setCodigo(ejemplarCodigoGenerator.generarSiguienteCodigo());
         ejemplar.setEstado(EstadoEjemplar.DISPONIBLE);
         ejemplar.setFechaAlta(LocalDate.now());
 
@@ -93,14 +88,6 @@ public class EjemplarServiceImpl implements EjemplarService {
 
         validarEjemplarModificable(ejemplar);
 
-        String codigo = request.codigo().trim();
-
-        if (ejemplarRepository.existsByCodigoAndIdNot(codigo, id)) {
-            throw new DuplicateResourceException(
-                    "Ya existe otro ejemplar con código: " + codigo
-            );
-        }
-
         Libro libro = buscarLibroPorId(request.libroId());
 
         validarLibroActivo(libro);
@@ -123,7 +110,7 @@ public class EjemplarServiceImpl implements EjemplarService {
 
         if (ejemplar.getEstado() == EstadoEjemplar.ALQUILADO) {
             throw new BusinessException(
-                    "No se puede poner fuera de servicio un ejemplar que está alquilado"
+                    "No se puede poner fuera de servicio un ejemplar que estÃƒÂ¡ alquilado"
             );
         }
 
@@ -141,7 +128,7 @@ public class EjemplarServiceImpl implements EjemplarService {
 
         if (ejemplar.getEstado() != EstadoEjemplar.FUERA_SERVICIO) {
             throw new BusinessException(
-                    "Solo se puede habilitar un ejemplar que está fuera de servicio"
+                    "Solo se puede habilitar un ejemplar que estÃƒÂ¡ fuera de servicio"
             );
         }
 
@@ -187,7 +174,7 @@ public class EjemplarServiceImpl implements EjemplarService {
 
         if (ejemplar.getEstado() == EstadoEjemplar.ALQUILADO) {
             throw new BusinessException(
-                    "No se puede modificar un ejemplar mientras está alquilado"
+                    "No se puede modificar un ejemplar mientras estÃƒÂ¡ alquilado"
             );
         }
     }
