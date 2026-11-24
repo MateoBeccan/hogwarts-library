@@ -9,7 +9,9 @@ import PageHeader from '@/components/common/PageHeader.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import type { ApiError } from '@/types/api';
 import type { EjemplarResponse, EstadoEjemplar } from '@/types/ejemplar';
+import { useAuthStore } from '@/stores/auth.store';
 
+const authStore = useAuthStore();
 const route = useRoute();
 
 const ejemplar = ref<EjemplarResponse | null>(null);
@@ -113,7 +115,7 @@ onMounted(() => {
       <div class="header-actions">
         <RouterLink class="button-link button-link--ghost" to="/ejemplares">Volver</RouterLink>
         <RouterLink
-          v-if="ejemplar && ejemplar.estado !== 'ALQUILADO'"
+          v-if="!authStore.isDemo && ejemplar && ejemplar.estado !== 'ALQUILADO'"
           class="button-link button-link--primary"
           :to="`/ejemplares/${ejemplar.id}/editar`"
         >
@@ -167,7 +169,7 @@ onMounted(() => {
         <p>{{ ejemplar.observaciones || 'Sin observaciones registradas.' }}</p>
       </section>
 
-      <div class="detail-actions">
+      <div v-if="!authStore.isDemo" class="detail-actions">
         <AppButton
           v-if="ejemplar.estado === 'DISPONIBLE'"
           variant="ghost"

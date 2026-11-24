@@ -11,7 +11,9 @@ import StatusBadge from '@/components/common/StatusBadge.vue';
 import { useToastStore } from '@/stores/toast.store';
 import type { ApiError } from '@/types/api';
 import type { EjemplarResponse, EstadoEjemplar } from '@/types/ejemplar';
+import { useAuthStore } from '@/stores/auth.store';
 
+const authStore = useAuthStore();
 const route = useRoute();
 const toastStore = useToastStore();
 
@@ -132,7 +134,7 @@ onMounted(() => {
 <template>
   <section>
     <PageHeader title="Ejemplares" subtitle="Administra las copias fisicas disponibles para alquiler.">
-      <RouterLink class="button-link button-link--primary" to="/ejemplares/nuevo">+ Nuevo ejemplar</RouterLink>
+      <RouterLink class="button-link button-link--primary" v-if="!authStore.isDemo" to="/ejemplares/nuevo">+ Nuevo ejemplar</RouterLink>
     </PageHeader>
 
     <div v-if="successMessage" class="alert alert--success" role="status">
@@ -201,7 +203,7 @@ onMounted(() => {
               <td>
                 <div class="row-actions">
                   <RouterLink :to="`/ejemplares/${ejemplar.id}`">Ver</RouterLink>
-                  <RouterLink v-if="ejemplar.estado !== 'ALQUILADO'" :to="`/ejemplares/${ejemplar.id}/editar`">Editar</RouterLink>
+                  <RouterLink v-if="!authStore.isDemo && ejemplar.estado !== 'ALQUILADO'" :to="`/ejemplares/${ejemplar.id}/editar`">Editar</RouterLink>
                   <button
                     v-if="ejemplar.estado === 'DISPONIBLE'"
                     type="button"

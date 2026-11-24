@@ -10,7 +10,9 @@ import PageHeader from '@/components/common/PageHeader.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import type { ApiError } from '@/types/api';
 import type { AlquilerResponse, EstadoAlquiler } from '@/types/alquiler';
+import { useAuthStore } from '@/stores/auth.store';
 
+const authStore = useAuthStore();
 const alquileres = ref<AlquilerResponse[]>([]);
 const search = ref('');
 const statusFilter = ref<'TODOS' | EstadoAlquiler>('TODOS');
@@ -73,7 +75,7 @@ onMounted(() => {
 <template>
   <section>
     <PageHeader title="Alquileres" subtitle="Consulta el estado de los alquileres registrados.">
-      <RouterLink class="button-link button-link--primary" to="/alquileres/nuevo">+ Nuevo alquiler</RouterLink>
+      <RouterLink class="button-link button-link--primary" v-if="!authStore.isDemo" to="/alquileres/nuevo">+ Nuevo alquiler</RouterLink>
     </PageHeader>
 
     <div v-if="errorMessage" class="alert alert--danger" role="alert">

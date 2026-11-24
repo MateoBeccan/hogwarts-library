@@ -5,16 +5,14 @@ import { useAuthStore } from '@/stores/auth.store';
 import type { ApiError } from '@/types/api';
 
 export const apiClient = axios.create({
-  baseURL: '/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: import.meta.env.VITE_API_URL?.trim().replace(/\/$/, '') || '/api',
+  timeout: 15_000,
 });
 
 apiClient.interceptors.request.use((config) => {
   const authStore = useAuthStore();
 
-  if (authStore.token) {
+  if (!config.url?.startsWith('/auth/') && authStore.token) {
     config.headers.Authorization = `Bearer ${authStore.token}`;
   }
 
@@ -24,12 +22,14 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiError>) => {
-    if (error.response?.status === 401) {
-      const authStore = useAuthStore();
+    const authStore = useAuthStore();
+    const rejectedToken = error.config?.headers.get('Authorization');
+    if (error.response?.status === 401 && authStore.token
+      && rejectedToken === `Bearer ${authStore.token}`) {
       authStore.logout();
-
-      if (router.currentRoute.value.name !== 'login') {
-        void router.push({ name: 'login' });
+      const current = router.currentRoute.value;
+      if (current.name !== 'login') {
+        void router.push({ name: 'login', query: { redirect: current.fullPath, session: 'expired' } });
       }
     }
 
@@ -39,8 +39,13 @@ apiClient.interceptors.response.use(
 
 export function getApiErrorMessage(error: unknown): string {
   if (axios.isAxiosError<ApiError>(error)) {
-    return error.response?.data?.message ?? 'Ha ocurrido un error inesperado.';
+    if (error.response?.status === 403) return 'Tu sesión no tiene permiso para realizar esta acción.';
+    if (error.response?.status === 429) return 'Hay demasiadas solicitudes. Esperá un momento y reintentá.';
+    if (!error.response || error.response.status >= 500 || typeof error.response.data === 'string') {
+      return 'No pudimos conectar con la biblioteca. Esperá un momento y reintentá.';
+    }
+    return error.response.data?.message ?? 'Ha ocurrido un error inesperado.';
   }
 
-  return 'Ha ocurrido un error inesperado.';
+  return 'No pudimos completar la solicitud. Esperá un momento y reintentá.';
 }

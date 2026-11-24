@@ -1,0 +1,30 @@
+databaseChangeLog:
+  - preConditions:
+      - dbms:
+          type: mysql
+      - sqlCheck:
+          expectedResult: 1
+          sql: SELECT IF(BINARY DATABASE() = 'hogwarts_library_demo', 1, 0)
+  - include:
+      file: db/changelog/db.changelog-master.yaml
+  - changeSet:
+      id: demo-001-fictitious-library
+      author: hogwarts-library
+      preConditions:
+        - onFail: HALT
+        - sqlCheck:
+            expectedResult: 0
+            sql: |
+              SELECT EXISTS (SELECT 1 FROM categoria)
+                OR EXISTS (SELECT 1 FROM autor)
+                OR EXISTS (SELECT 1 FROM libro)
+                OR EXISTS (SELECT 1 FROM ejemplar)
+                OR EXISTS (SELECT 1 FROM cliente)
+                OR EXISTS (SELECT 1 FROM alquiler)
+                OR EXISTS (SELECT 1 FROM detalle_alquiler)
+                OR EXISTS (SELECT 1 FROM pago)
+                OR EXISTS (SELECT 1 FROM usuario)
+      changes:
+        - sqlFile:
+            path: demo/fictitious-library.sql
+            relativeToChangelogFile: true

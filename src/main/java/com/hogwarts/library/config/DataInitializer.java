@@ -3,68 +3,53 @@ package com.hogwarts.library.config;
 import com.hogwarts.library.domain.Usuario;
 import com.hogwarts.library.domain.enums.RolUsuario;
 import com.hogwarts.library.repository.UsuarioRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
+
 @Component
-@Profile("dev")
-public class DataInitializer {
+@Profile("dev & !hosted & !test & !demo & !prod")
+public class DataInitializer implements CommandLineRunner {
 
-    private static final Logger log =
-            LoggerFactory.getLogger(DataInitializer.class);
+    private final UsuarioRepository usuarios;
+    private final PasswordEncoder passwordEncoder;
+    private final String adminPassword;
+    private final String empleadoPassword;
 
-    @Bean
-    CommandLineRunner crearUsuariosIniciales(
-            UsuarioRepository usuarioRepository,
-            PasswordEncoder passwordEncoder
-    ) {
+    public DataInitializer(UsuarioRepository usuarios, PasswordEncoder passwordEncoder,
+                           @Value("${DEV_ADMIN_PASSWORD:}") String adminPassword,
+                           @Value("${DEV_EMPLEADO_PASSWORD:}") String empleadoPassword) {
+        this.usuarios = usuarios;
+        this.passwordEncoder = passwordEncoder;
+        this.adminPassword = adminPassword;
+        this.empleadoPassword = empleadoPassword;
+    }
 
-        return args -> {
+    @Override
+    public void run(String... args) {
+        crearSiFalta("admin", RolUsuario.ADMIN, adminPassword);
+        crearSiFalta("empleado", RolUsuario.EMPLEADO, empleadoPassword);
+    }
 
-            if (!usuarioRepository.existsByUsername("admin")) {
+    private void crearSiFalta(String username, RolUsuario rol, String password) {
+        if (password.isBlank() || usuarios.existsByUsername(username)) {
+            return;
+        }
+        if (password.length() < 12 || password.getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new IllegalArgumentException("La contraseña inicial de desarrollo debe tener al menos 12 caracteres y hasta 72 bytes");
+        }
 
-                Usuario admin = new Usuario();
-
-                admin.setUsername("admin");
-                admin.setPassword(
-                        passwordEncoder.encode("Admin123!")
-                );
-                admin.setNombre("Administrador");
-                admin.setApellido("Hogwarts");
-                admin.setRol(RolUsuario.ADMIN);
-                admin.setActivo(true);
-
-                usuarioRepository.save(admin);
-
-                log.info(
-                        "Usuario administrador inicial creado"
-                );
-            }
-
-            if (!usuarioRepository.existsByUsername("empleado")) {
-
-                Usuario empleado = new Usuario();
-
-                empleado.setUsername("empleado");
-                empleado.setPassword(
-                        passwordEncoder.encode("Empleado123!")
-                );
-                empleado.setNombre("Empleado");
-                empleado.setApellido("Hogwarts");
-                empleado.setRol(RolUsuario.EMPLEADO);
-                empleado.setActivo(true);
-
-                usuarioRepository.save(empleado);
-
-                log.info(
-                        "Usuario empleado inicial creado"
-                );
-            }
-        };
+        Usuario usuario = new Usuario();
+        usuario.setUsername(username);
+        usuario.setPassword(passwordEncoder.encode(password));
+        usuario.setNombre(username);
+        usuario.setApellido("Hogwarts");
+        usuario.setRol(rol);
+        usuario.setActivo(true);
+        usuarios.save(usuario);
     }
 }

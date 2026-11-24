@@ -96,7 +96,7 @@ onMounted(() => {
 <template>
   <section>
     <PageHeader title="Categorias" subtitle="Organiza el catalogo de la biblioteca.">
-      <RouterLink class="button-link button-link--primary" to="/categorias/nueva">+ Nueva categoria</RouterLink>
+      <RouterLink class="button-link button-link--primary" v-if="!authStore.isDemo" to="/categorias/nueva">+ Nueva categoria</RouterLink>
     </PageHeader>
 
     <div v-if="successMessage" class="alert alert--success" role="status">
@@ -139,7 +139,7 @@ onMounted(() => {
               <td>
                 <div class="row-actions">
                   <button type="button" @click="selectCategoria(categoria)">Ver</button>
-                  <RouterLink :to="`/categorias/${categoria.id}/editar`">Editar</RouterLink>
+                  <RouterLink v-if="!authStore.isDemo" :to="`/categorias/${categoria.id}/editar`">Editar</RouterLink>
                   <button
                     v-if="canDelete && categoria.activa"
                     type="button"

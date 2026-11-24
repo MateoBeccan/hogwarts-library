@@ -118,7 +118,7 @@ onMounted(() => {
     <PageHeader title="Detalle de libro" subtitle="Informacion bibliografica de la obra seleccionada.">
       <div class="header-actions">
         <RouterLink class="button-link button-link--ghost" to="/libros">Volver</RouterLink>
-        <RouterLink v-if="libro" class="button-link button-link--primary" :to="`/libros/${libro.id}/editar`">Editar</RouterLink>
+        <RouterLink v-if="!authStore.isDemo && libro" class="button-link button-link--primary" :to="`/libros/${libro.id}/editar`">Editar</RouterLink>
       </div>
     </PageHeader>
 

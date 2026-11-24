@@ -8,7 +8,9 @@ import PageHeader from '@/components/common/PageHeader.vue';
 import StatusBadge from '@/components/common/StatusBadge.vue';
 import type { ApiError } from '@/types/api';
 import type { AutorResponse } from '@/types/autor';
+import { useAuthStore } from '@/stores/auth.store';
 
+const authStore = useAuthStore();
 const route = useRoute();
 
 const autor = ref<AutorResponse | null>(null);
@@ -55,7 +57,7 @@ onMounted(() => {
     <PageHeader title="Detalle de autor" subtitle="Informacion del autor seleccionado.">
       <div class="header-actions">
         <RouterLink class="button-link button-link--ghost" to="/autores">Volver</RouterLink>
-        <RouterLink v-if="autor" class="button-link button-link--primary" :to="`/autores/${autor.id}/editar`">Editar</RouterLink>
+        <RouterLink v-if="!authStore.isDemo && autor" class="button-link button-link--primary" :to="`/autores/${autor.id}/editar`">Editar</RouterLink>
       </div>
     </PageHeader>
 

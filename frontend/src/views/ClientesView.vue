@@ -112,7 +112,7 @@ onMounted(() => {
 <template>
   <section>
     <PageHeader title="Clientes" subtitle="Administra las personas registradas en la biblioteca.">
-      <RouterLink class="button-link button-link--primary" to="/clientes/nuevo">+ Nuevo cliente</RouterLink>
+      <RouterLink class="button-link button-link--primary" v-if="!authStore.isDemo" to="/clientes/nuevo">+ Nuevo cliente</RouterLink>
     </PageHeader>
 
     <div v-if="successMessage" class="alert alert--success" role="status">
@@ -172,7 +172,7 @@ onMounted(() => {
               <td>
                 <div class="row-actions">
                   <RouterLink :to="`/clientes/${cliente.id}`">Ver</RouterLink>
-                  <RouterLink :to="`/clientes/${cliente.id}/editar`">Editar</RouterLink>
+                  <RouterLink v-if="!authStore.isDemo" :to="`/clientes/${cliente.id}/editar`">Editar</RouterLink>
                   <button
                     v-if="canManageState && cliente.activo"
                     type="button"

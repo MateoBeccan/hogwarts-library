@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.AccountStatusException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -114,9 +115,8 @@ public class GlobalExceptionHandler {
     }
 
     // Login con username/password incorrectos
-    @ExceptionHandler(BadCredentialsException.class)
+    @ExceptionHandler({BadCredentialsException.class, AccountStatusException.class})
     public ResponseEntity<ApiError> handleBadCredentials(
-            BadCredentialsException ex,
             HttpServletRequest request
     ) {
 
@@ -182,11 +182,8 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
 
-        log.error(
-                "Error inesperado procesando {}",
-                request.getRequestURI(),
-                ex
-        );
+        log.error("Error inesperado en {}: {} ({})", request.getMethod(), ex.getClass().getSimpleName(),
+                ex.getStackTrace().length == 0 ? "sin ubicación" : ex.getStackTrace()[0]);
 
         ApiError error = new ApiError(
                 LocalDateTime.now(),

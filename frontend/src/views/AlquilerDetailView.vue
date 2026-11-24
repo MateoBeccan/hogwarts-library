@@ -13,7 +13,9 @@ import { useToastStore } from '@/stores/toast.store';
 import type { ApiError } from '@/types/api';
 import type { AlquilerResponse, EstadoAlquiler } from '@/types/alquiler';
 import type { MetodoPago, PagoRequest, PagoResponse } from '@/types/pago';
+import { useAuthStore } from '@/stores/auth.store';
 
+const authStore = useAuthStore();
 const route = useRoute();
 const toastStore = useToastStore();
 
@@ -375,7 +377,7 @@ onMounted(() => {
           </div>
           <div class="payments-actions">
             <AppButton v-if="paymentsErrorMessage" variant="ghost" @click="loadPagos">Reintentar</AppButton>
-            <AppButton v-if="canRegisterPayment" @click="openPaymentDialog">Registrar pago</AppButton>
+            <AppButton v-if="!authStore.isDemo && canRegisterPayment" @click="openPaymentDialog">Registrar pago</AppButton>
           </div>
         </div>
 
@@ -413,7 +415,7 @@ onMounted(() => {
         </div>
       </section>
 
-      <section v-if="alquiler.estado === 'ACTIVO'" class="detail-actions">
+      <section v-if="!authStore.isDemo && alquiler.estado === 'ACTIVO'" class="detail-actions">
         <AppButton variant="ghost" :loading="isActionLoading && pendingAction === 'finalizar'" :disabled="isActionLoading" @click="openAction('finalizar')">
           Finalizar alquiler
         </AppButton>

@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'EMPLEADO';
+export type UserRole = 'ADMIN' | 'EMPLEADO' | 'DEMO';
 
 export interface LoginRequest {
   username: string;
@@ -12,9 +12,4 @@ export interface LoginResponse {
   rol: UserRole;
 }
 
-export interface AuthSession {
-  token: string;
-  type: 'Bearer';
-  username: string;
-  rol: UserRole;
-}
+export type AuthSession = LoginResponse;

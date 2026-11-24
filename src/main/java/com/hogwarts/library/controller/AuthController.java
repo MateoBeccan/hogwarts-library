@@ -6,6 +6,8 @@ import com.hogwarts.library.dto.auth.LoginResponse;
 import com.hogwarts.library.repository.UsuarioRepository;
 import com.hogwarts.library.security.JwtService;
 import jakarta.validation.Valid;
+import org.springframework.context.annotation.Profile;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,6 +16,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@Profile("!demo")
 @RequestMapping("/api/auth")
 public class AuthController {
 
@@ -67,6 +70,6 @@ public class AuthController {
                         usuario.getRol().name()
                 );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(response);
     }
 }

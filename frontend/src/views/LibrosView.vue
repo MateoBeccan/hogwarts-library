@@ -126,7 +126,7 @@ onMounted(() => {
 <template>
   <section>
     <PageHeader title="Catalogo de libros" subtitle="Gestiona las obras disponibles en la biblioteca.">
-      <RouterLink class="button-link button-link--primary" to="/libros/nuevo">+ Nuevo libro</RouterLink>
+      <RouterLink class="button-link button-link--primary" v-if="!authStore.isDemo" to="/libros/nuevo">+ Nuevo libro</RouterLink>
     </PageHeader>
 
     <div v-if="successMessage" class="alert alert--success" role="status">
@@ -188,7 +188,7 @@ onMounted(() => {
               <td>
                 <div class="row-actions">
                   <RouterLink :to="`/libros/${libro.id}`">Ver</RouterLink>
-                  <RouterLink :to="`/libros/${libro.id}/editar`">Editar</RouterLink>
+                  <RouterLink v-if="!authStore.isDemo" :to="`/libros/${libro.id}/editar`">Editar</RouterLink>
                   <button
                     v-if="canManageState && libro.activo"
                     type="button"

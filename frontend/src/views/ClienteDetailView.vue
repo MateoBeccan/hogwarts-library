@@ -118,7 +118,7 @@ onMounted(() => {
     <PageHeader title="Detalle de cliente" subtitle="Informacion registrada para la persona seleccionada.">
       <div class="header-actions">
         <RouterLink class="button-link button-link--ghost" to="/clientes">Volver</RouterLink>
-        <RouterLink v-if="cliente" class="button-link button-link--primary" :to="`/clientes/${cliente.id}/editar`">Editar</RouterLink>
+        <RouterLink v-if="!authStore.isDemo && cliente" class="button-link button-link--primary" :to="`/clientes/${cliente.id}/editar`">Editar</RouterLink>
       </div>
     </PageHeader>
 

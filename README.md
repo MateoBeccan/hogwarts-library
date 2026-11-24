@@ -6,9 +6,10 @@ El proyecto fue diseñado como una aplicación backend con reglas de negocio rea
 
 ## Versión actual
 
-**V1.0.0**
+Esta rama incorpora un frontend Vue, autores normalizados, códigos automáticos de ejemplar y un perfil de demostración. La documentación del dominio describe la base funcional de la V1.
 
-La V1 representa la primera versión funcional y estable del sistema.
+- [Guía de despliegue y desarrollo local](DEPLOYMENT_GUIDE.md)
+- [Informe de preparación de la demo](DEMO_READINESS_REPORT.md)
 
 ## Tecnologías
 
@@ -25,6 +26,7 @@ La V1 representa la primera versión funcional y estable del sistema.
 - JUnit 5
 - Mockito
 - H2 para tests
+- Vue 3, TypeScript, Vite, Vue Router, Pinia y Axios
 
 ## Arquitectura
 
@@ -288,8 +290,8 @@ PowerShell:
 
 ```powershell
 $env:DB_USERNAME="usuario"
-$env:DB_PASSWORD="password"
-$env:JWT_SECRET="clave-jwt-segura"
+$env:DB_PASSWORD = Read-Host 'Contraseña MySQL' -MaskInput
+$env:JWT_SECRET = [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')
 ```
 
 ### 2. Crear la base de datos
@@ -301,10 +303,12 @@ CREATE DATABASE hogwarts_library_db;
 ### 3. Ejecutar
 
 ```powershell
-.\mvnw spring-boot:run
+.\mvnw.cmd spring-boot:run
 ```
 
 Liquibase aplicará automáticamente las migraciones pendientes.
+
+En una base local nueva, definí `DEV_ADMIN_PASSWORD` o `DEV_EMPLEADO_PASSWORD` antes de iniciar para crear las cuentas locales correspondientes. Para iniciar Vue, ejecutá `npm ci` y `npm run dev` desde `frontend`.
 
 ## Ejecutar tests
 

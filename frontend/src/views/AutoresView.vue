@@ -111,7 +111,7 @@ onMounted(() => {
 <template>
   <section>
     <PageHeader title="Autores" subtitle="Administra las firmas asociadas al catalogo.">
-      <RouterLink class="button-link button-link--primary" to="/autores/nuevo">+ Nuevo autor</RouterLink>
+      <RouterLink class="button-link button-link--primary" v-if="!authStore.isDemo" to="/autores/nuevo">+ Nuevo autor</RouterLink>
     </PageHeader>
 
     <div v-if="successMessage" class="alert alert--success" role="status">
@@ -158,7 +158,7 @@ onMounted(() => {
               <td>
                 <div class="row-actions">
                   <RouterLink :to="`/autores/${autor.id}`">Ver</RouterLink>
-                  <RouterLink :to="`/autores/${autor.id}/editar`">Editar</RouterLink>
+                  <RouterLink v-if="!authStore.isDemo" :to="`/autores/${autor.id}/editar`">Editar</RouterLink>
                   <button
                     v-if="canDelete && autor.activo"
                     type="button"

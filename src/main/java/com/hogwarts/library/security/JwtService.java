@@ -3,11 +3,13 @@ package com.hogwarts.library.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,6 +23,16 @@ public class JwtService {
 
     @Value("${app.jwt.expiration-ms}")
     private long expirationMs;
+
+    @PostConstruct
+    void validarConfiguracion() {
+        if (secret.getBytes(StandardCharsets.UTF_8).length < 32 || secret.isBlank()) {
+            throw new IllegalStateException("JWT_SECRET debe tener al menos 32 bytes");
+        }
+        if (expirationMs < 1000 || expirationMs > 86400000) {
+            throw new IllegalStateException("JWT_EXPIRATION_MS debe estar entre 1000 y 86400000");
+        }
+    }
 
     public String generarToken(UserDetails userDetails) {
 
@@ -108,7 +120,7 @@ public class JwtService {
     private SecretKey obtenerClave() {
 
         byte[] keyBytes =
-                secret.getBytes();
+                secret.getBytes(StandardCharsets.UTF_8);
 
         return Keys.hmacShaKeyFor(keyBytes);
     }

@@ -6,19 +6,27 @@ import type { AuthSession, LoginRequest, UserRole } from '@/types/auth';
 
 const STORAGE_KEY = 'hogwarts-library.auth';
 
-function readStoredSession(): AuthSession | null {
-  const rawSession = localStorage.getItem(STORAGE_KEY);
-
-  if (!rawSession) {
-    return null;
-  }
-
+function expiresAt(token: string): number {
   try {
-    return JSON.parse(rawSession) as AuthSession;
+    const payload = token.split('.')[1]?.replace(/-/g, '+').replace(/_/g, '/');
+    const { exp } = JSON.parse(atob(payload ?? '')) as { exp?: number };
+    return typeof exp === 'number' ? exp * 1000 : 0;
   } catch {
-    localStorage.removeItem(STORAGE_KEY);
-    return null;
+    return 0;
   }
+}
+
+function readStoredSession(): AuthSession | null {
+  try {
+    const session = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? 'null') as AuthSession | null;
+    if (session && expiresAt(session.token) > Date.now()) {
+      return session;
+    }
+  } catch {
+    // Una sesión dañada se descarta igual que una vencida.
+  }
+  sessionStorage.removeItem(STORAGE_KEY);
+  return null;
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -27,35 +35,43 @@ export const useAuthStore = defineStore('auth', () => {
   const token = computed(() => session.value?.token ?? null);
   const username = computed(() => session.value?.username ?? '');
   const role = computed<UserRole | null>(() => session.value?.rol ?? null);
-  const isAuthenticated = computed(() => Boolean(session.value?.token));
-  const initials = computed(() => username.value.slice(0, 2).toUpperCase() || 'HL');
+  const isDemo = computed(() => role.value === 'DEMO');
+
+  function hasActiveSession(): boolean {
+    return token.value !== null && expiresAt(token.value) > Date.now();
+  }
+
+  function startSession(response: AuthSession): void {
+    if (!response?.token || expiresAt(response.token) <= Date.now()) {
+      throw new Error('Respuesta de autenticación inválida');
+    }
+    session.value = response;
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(response));
+    localStorage.removeItem(STORAGE_KEY);
+  }
 
   async function login(credentials: LoginRequest): Promise<void> {
-    const response = await authApi.login(credentials);
+    startSession(await authApi.login(credentials));
+  }
 
-    session.value = {
-      token: response.token,
-      type: response.type,
-      username: response.username,
-      rol: response.rol,
-    };
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(session.value));
+  async function loginDemo(): Promise<void> {
+    startSession(await authApi.loginDemo());
   }
 
   function logout(): void {
     session.value = null;
+    sessionStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_KEY);
   }
 
   return {
-    session,
     token,
     username,
     role,
-    isAuthenticated,
-    initials,
+    isDemo,
+    hasActiveSession,
     login,
+    loginDemo,
     logout,
   };
 });

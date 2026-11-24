@@ -20,7 +20,9 @@ import type { AlquilerResponse, EstadoAlquiler } from '@/types/alquiler';
 import type { ClienteResponse } from '@/types/cliente';
 import type { EjemplarResponse } from '@/types/ejemplar';
 import type { LibroResponse } from '@/types/libro';
+import { useAuthStore } from '@/stores/auth.store';
 
+const authStore = useAuthStore();
 const clientes = ref<ClienteResponse[]>([]);
 const libros = ref<LibroResponse[]>([]);
 const ejemplares = ref<EjemplarResponse[]>([]);
@@ -244,7 +246,7 @@ onMounted(() => {
       </div>
     </section>
 
-    <section class="quick-actions">
+    <section v-if="!authStore.isDemo" class="quick-actions">
       <h2>Acciones rapidas</h2>
       <div class="quick-actions__grid">
         <RouterLink v-for="action in quickActions" :key="action.path" :to="action.path">{{ action.label }}</RouterLink>

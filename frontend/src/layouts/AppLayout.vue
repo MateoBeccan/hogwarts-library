@@ -123,6 +123,7 @@ function logout(): void {
       </header>
 
       <main class="content-panel">
+        <p v-if="authStore.isDemo" class="alert" role="status">Demo de solo lectura · Datos ficticios</p>
         <RouterView />
       </main>
     </div>
