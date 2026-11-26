@@ -2,6 +2,14 @@
 
 **Rama candidata** `feature/v2.2.1-hardening`, a partir de `f249008`. El trabajo se realizó en el workspace y requiere revisión antes de publicarse.
 
+## TiDB Cloud Starter
+
+La opción gratuita para la demo combina TiDB Cloud Starter en modo MySQL con límite de gasto en 0, Render Free y Vercel Hobby. El primer arranque remoto informado llegó a Liquibase con TLS y se detuvo en `003-create-libro`, después de que TiDB creara un índice implícito con el nombre de la clave foránea. Las migraciones ahora crean los índices antes de las claves y aceptan los seis checksums históricos exactos de los changesets reordenados.
+
+La verificación local con MySQL 8.0.43 pasó 74 pruebas. El JAR arrancó sobre el historial MySQL previo, conservó los 14 registros y ejecutó cero changesets. En MySQL demo vacío, el primer arranque aplicó 15 y el siguiente cero. Se comprobaron las ocho claves foráneas, la ausencia de índices duplicados, Hibernate `validate`, TLS, la carga ficticia, el JWT demo, el bloqueo de escrituras y `/healthz`.
+
+Quedan pendientes el inventario de solo lectura del esquema TiDB parcial, su recuperación autorizada y los dos arranques sobre TiDB Cloud. El entorno de validación carecía de los datos de conexión remota. El informe incluye las consultas, los criterios para decidir si el esquema puede vaciarse y los comandos de arranque. [Informe de compatibilidad con TiDB](TIDB_COMPATIBILITY_REPORT.md).
+
 ## Auditoría inicial
 
 El árbol de trabajo estaba limpio. `feature/v2-evolution` y ambas ramas remotas de evolución y hardening apuntaban al mismo commit `f249008`, que agrega códigos automáticos de ejemplar, autores normalizados y las migraciones 002 y 003. Los commits `7451561` y `d1ab23f` ordenan los archivos generados del frontend. `develop` apuntaba a la V1 en `389929c`; el `main` local estaba en `df73d9d` y su remoto en `c83474d`. La rama de respaldo precede a los cambios de evolución. Esta comparación usa las referencias del checkout al inicio del trabajo.
@@ -16,7 +24,7 @@ El proyecto contiene una API Java 21/Spring Boot 4.1.0 organizada en controlador
 | La cadena permitía el prefijo de autenticación completo y usaba una regla autenticada genérica. Los roles normales permiten escrituras. | Autorización explícita. El perfil demo emite JWT para una identidad en memoria y permite solo lecturas concretas. Los perfiles normales mantienen el acceso de `ADMIN` y `EMPLEADO` sobre los controladores existentes. |
 | No había configuración CORS de hosting. Axios usaba el proxy Vite y guardaba el token en `localStorage`. | Orígenes exactos, API HTTPS validada al construir, sesión en `sessionStorage`, manejo de 401, 403, 429 y fallos de conexión. |
 | El README describía V1. Docker y Vercel carecían de archivos de configuración en esta rama. | Configuración Vite/Vercel para rutas directas, imagen Java 21 con usuario sin privilegios y CA adicional en runtime, health check y guías. |
-| No había catálogo, clientes ni operaciones ficticias aisladas. | Changelog demo sobre un esquema dedicado y vacío. Las migraciones 001–003 se reutilizan sin cambios. |
+| No había catálogo, clientes ni operaciones ficticias aisladas. | Changelog demo sobre un esquema dedicado y vacío. Reutiliza las migraciones comunes 001–003. |
 | Un fallo no controlado escribía la excepción completa en los logs. | La respuesta sigue siendo genérica. El log de aplicación conserva método, clase y ubicación del error para diagnóstico. |
 
 Se revisaron el README, pom, npm y lockfile, archivos de configuración, perfiles de prueba, referencias de entorno, changelogs, seguridad y JWT, controladores REST, Axios, navegación, pruebas y posibles credenciales. Al inicio no había Dockerfile, Compose, YAML de configuración Spring ni archivos `.env` versionados. Los valores de prueba fijos permanecen en código de test. No se cambiaron las versiones de dependencias durante esta preparación.
@@ -29,7 +37,7 @@ La carga usa el modelo vigente. Incluye 3 autores, 3 categorías, 3 libros, 6 ej
 
 El endpoint público `GET /healthz` verifica disponibilidad de Spring y acceso a la base con respuesta mínima. La aplicación no incorporó Actuator. La API aplica CORS HTTPS con allowlist, además de usar secretos de entorno, comprobación de cuenta habilitada y respuestas sin stack traces. La entrada de Docker permite instalar un CA PEM sin incorporar certificados privados al build.
 
-## Validaciones
+## Validaciones de la preparación inicial
 
 | Validación | Resultado |
 | --- | --- |
@@ -47,7 +55,7 @@ El endpoint público `GET /healthz` verifica disponibilidad de Spring y acceso a
 | Documentación y contenedor | `DEPLOYMENT_GUIDE.md`, `DEMO_READINESS_REPORT.md`, `Dockerfile`, `.dockerignore`, `docker/entrypoint.sh`, `.env.example` | `README.md`, `.gitignore`, `.gitattributes`, `.mvn/wrapper/maven-wrapper.properties` |
 | Configuración de API | `src/main/resources/application-dev.properties`, `application-hosted.properties`, `application-demo.properties` | `src/main/resources/application.properties` |
 | Backend | `controller/DemoAuthController.java`, `controller/HealthController.java`, `security/DemoUserDetailsService.java` | `config/DataInitializer.java`, `config/SecurityConfig.java`, `controller/AuthController.java`, `exception/GlobalExceptionHandler.java`, `security/CustomUserDetailsService.java`, `security/JwtAuthenticationFilter.java`, `security/JwtService.java` |
-| Liquibase | `db/changelog/db.changelog-demo.yaml`, `db/changelog/demo/fictitious-library.sql` | Las migraciones preexistentes conservan su historial. |
+| Liquibase | `db/changelog/db.changelog-demo.yaml`, `db/changelog/demo/fictitious-library.sql` | La corrección TiDB reordena el DDL de las migraciones 001 y 003 y conserva sus checksums históricos. |
 | Pruebas | `security/DemoSecurityIntegrationTest.java` | `LibraryApplicationTests.java`, `src/test/resources/application-migration.properties` |
 | Frontend | `frontend/vercel.json`, `frontend/.env.example` | `vite.config.ts`, `src/api/auth.api.ts`, `src/api/axios.ts`, `src/types/auth.ts`, `src/stores/auth.store.ts`, `src/router/index.ts`, `src/layouts/AppLayout.vue`, `src/styles/main.css` |
 | Vistas frontend | — | `LoginView`, `DashboardView`, `AlquileresView`, `AlquilerDetailView`, `AutoresView`, `AutorDetailView`, `CategoriasView`, `ClientesView`, `ClienteDetailView`, `EjemplaresView`, `EjemplarDetailView`, `LibrosView` y `LibroDetailView` |
@@ -55,15 +63,15 @@ El endpoint público `GET /healthz` verifica disponibilidad de Spring y acceso a
 ## Riesgos y publicación
 
 1. Validá la imagen con Docker antes de publicar. Comprobá el consumo de memoria del proceso y el arranque con el límite del plan elegido.
-2. Revisá y publicá la versión de `feature/v2.2.1-hardening` cuando esté autorizada. Creá una base MySQL exclusiva con esquema `hogwarts_library_demo` y credenciales independientes. Configurá TLS y copias. La [guía de despliegue](DEPLOYMENT_GUIDE.md) detalla el orden, las variables y los valores.
+2. Revisá la versión de `feature/v2.2.1-hardening`. Prepará el esquema exclusivo `hogwarts_library_demo` con credenciales dedicadas y TLS. En TiDB, completá el inventario y verificá ambos arranques antes de publicar. [Guía de despliegue](DEPLOYMENT_GUIDE.md), [recuperación de TiDB](TIDB_COMPATIBILITY_REPORT.md#recuperar-el-esquema-parcial).
 3. Desplegá la API Docker con perfil `demo`, el CA correspondiente y `/healthz` como health check. Luego publicá Vite en Vercel apuntando al backend HTTPS y autorizá el origen exacto de Vercel en la API.
 4. Revisá el primer arranque, una recarga de rutas y los rechazos de escrituras del rol demo sobre la URL pública. Controlá memoria, conexiones y latencia. Render Free puede tardar alrededor de un minuto en reactivar el servicio. El frontend señala la espera y permite reintentar. La aplicación no incorpora un limitador distribuido y el tráfico abusivo puede consumir capacidad de la API o de MySQL. Un límite perimetral puede cubrir ese riesgo cuando se configure el dominio definitivo.
 5. Verificá la URL pública antes de enlazarla desde el portfolio. Las ilustraciones PNG existentes suman aproximadamente 23 MB en el build completo y pueden penalizar la primera visita con una red lenta. Se conserva el material visual existente.
 
-El trabajo queda en el workspace, sin commit ni push. Aún no se provisionaron servicios externos, no se modificó el portfolio y no hay una URL pública de demo.
+La corrección está en el workspace. La instancia TiDB informada está pendiente de recuperar y validar antes de publicar una URL de demo.
 
 Mensaje de commit sugerido
 
 ```
-feat(deployment): prepare Hogwarts Library for secure public demo
+fix(liquibase): ensure MySQL and TiDB migration compatibility
 ```

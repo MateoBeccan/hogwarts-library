@@ -1,5 +1,7 @@
 databaseChangeLog:
 
+  # Create the child indexes before their foreign keys so TiDB can reuse them.
+  # The checksums below identify the original MySQL changesets before reordering.
   - changeSet:
       id: 001-create-categoria
       author: mateo
@@ -89,6 +91,7 @@ databaseChangeLog:
   - changeSet:
       id: 003-create-libro
       author: mateo
+      validCheckSum: "9:a3a668dede57673bbcace23ee18fe3ca"
       changes:
         - createTable:
             tableName: libro
@@ -141,13 +144,6 @@ databaseChangeLog:
             columnNames: isbn
             constraintName: uk_libro_isbn
 
-        - addForeignKeyConstraint:
-            baseTableName: libro
-            baseColumnNames: categoria_id
-            referencedTableName: categoria
-            referencedColumnNames: id
-            constraintName: fk_libro_categoria
-
         - createIndex:
             tableName: libro
             indexName: fk_libro_categoria
@@ -155,9 +151,17 @@ databaseChangeLog:
               - column:
                   name: categoria_id
 
+        - addForeignKeyConstraint:
+            baseTableName: libro
+            baseColumnNames: categoria_id
+            referencedTableName: categoria
+            referencedColumnNames: id
+            constraintName: fk_libro_categoria
+
   - changeSet:
       id: 004-create-ejemplar
       author: mateo
+      validCheckSum: "9:cb2ca14f81e116857b4854188ec3f608"
       changes:
         - createTable:
             tableName: ejemplar
@@ -203,13 +207,6 @@ databaseChangeLog:
             columnNames: codigo
             constraintName: uk_ejemplar_codigo
 
-        - addForeignKeyConstraint:
-            baseTableName: ejemplar
-            baseColumnNames: libro_id
-            referencedTableName: libro
-            referencedColumnNames: id
-            constraintName: fk_ejemplar_libro
-
         - createIndex:
             tableName: ejemplar
             indexName: fk_ejemplar_libro
@@ -224,9 +221,17 @@ databaseChangeLog:
               - column:
                   name: estado
 
+        - addForeignKeyConstraint:
+            baseTableName: ejemplar
+            baseColumnNames: libro_id
+            referencedTableName: libro
+            referencedColumnNames: id
+            constraintName: fk_ejemplar_libro
+
   - changeSet:
       id: 005-create-alquiler
       author: mateo
+      validCheckSum: "9:9b1205e013441d95d2306b5cfcebbe5e"
       changes:
         - createTable:
             tableName: alquiler
@@ -270,13 +275,6 @@ databaseChangeLog:
                   constraints:
                     nullable: false
 
-        - addForeignKeyConstraint:
-            baseTableName: alquiler
-            baseColumnNames: cliente_id
-            referencedTableName: cliente
-            referencedColumnNames: id
-            constraintName: fk_alquiler_cliente
-
         - createIndex:
             tableName: alquiler
             indexName: idx_alquiler_estado
@@ -293,9 +291,17 @@ databaseChangeLog:
               - column:
                   name: estado
 
+        - addForeignKeyConstraint:
+            baseTableName: alquiler
+            baseColumnNames: cliente_id
+            referencedTableName: cliente
+            referencedColumnNames: id
+            constraintName: fk_alquiler_cliente
+
   - changeSet:
       id: 006-create-detalle-alquiler
       author: mateo
+      validCheckSum: "9:a7f6acf571d4f8c417cc725f81415651"
       changes:
         - createTable:
             tableName: detalle_alquiler
@@ -338,6 +344,13 @@ databaseChangeLog:
             columnNames: alquiler_id, ejemplar_id
             constraintName: uk_detalle_alquiler_ejemplar
 
+        - createIndex:
+            tableName: detalle_alquiler
+            indexName: fk_detalle_ejemplar
+            columns:
+              - column:
+                  name: ejemplar_id
+
         - addForeignKeyConstraint:
             baseTableName: detalle_alquiler
             baseColumnNames: alquiler_id
@@ -352,16 +365,10 @@ databaseChangeLog:
             referencedColumnNames: id
             constraintName: fk_detalle_ejemplar
 
-        - createIndex:
-            tableName: detalle_alquiler
-            indexName: fk_detalle_ejemplar
-            columns:
-              - column:
-                  name: ejemplar_id
-
   - changeSet:
       id: 007-create-pago
       author: mateo
+      validCheckSum: "9:d9035004e4772dc5e0218e284dfee552"
       changes:
         - createTable:
             tableName: pago
@@ -397,19 +404,19 @@ databaseChangeLog:
                   constraints:
                     nullable: false
 
-        - addForeignKeyConstraint:
-            baseTableName: pago
-            baseColumnNames: alquiler_id
-            referencedTableName: alquiler
-            referencedColumnNames: id
-            constraintName: fk_pago_alquiler
-
         - createIndex:
             tableName: pago
             indexName: fk_pago_alquiler
             columns:
               - column:
                   name: alquiler_id
+
+        - addForeignKeyConstraint:
+            baseTableName: pago
+            baseColumnNames: alquiler_id
+            referencedTableName: alquiler
+            referencedColumnNames: id
+            constraintName: fk_pago_alquiler
 
   - changeSet:
       id: 008-create-usuario

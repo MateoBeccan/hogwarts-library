@@ -1,6 +1,6 @@
 # Desplegar Hogwarts Library
 
-La demo pública usa el frontend Vue en Vercel, una API Spring Boot en Render y un MySQL administrado en Aiven. El navegador usa HTTPS para comunicarse con la API y Java verifica tanto el certificado como el nombre del servidor MySQL. La entrada pública es el botón **Acceder a la demo**. La sesión permite explorar la biblioteca ficticia con un JWT de solo lectura.
+La demo pública está preparada para usar Vue en Vercel Hobby, Spring Boot en Render Free y TiDB Cloud Starter en modo compatible con MySQL. El navegador usa HTTPS para comunicarse con la API y Java verifica el certificado y el nombre del servidor de base de datos. **Acceder a la demo** inicia una sesión con un JWT de solo lectura.
 
 ## Proveedores y costos
 
@@ -8,10 +8,10 @@ La demo pública usa el frontend Vue en Vercel, una API Spring Boot en Render y 
 | --- | --- | --- |
 | Frontend | Vercel, con raíz `frontend` | Hobby está orientado a uso personal no comercial. Revisá las condiciones y los límites de transferencia del portfolio. |
 | API | Render Web Service, runtime Docker | Free tiene 512 MB y se suspende tras 15 minutos de inactividad. El próximo acceso puede tardar alrededor de un minuto. Starter se anuncia desde USD 7/mes con 512 MB y sin suspensión por inactividad. Si el RSS supera el margen disponible, elegí una instancia con más memoria. |
-| MySQL | Aiven para MySQL, plan Developer | Aiven retiró el plan gratuito para nuevas bases MySQL. Developer se anuncia a USD 5/mes con 8 GB y un solo nodo, con copias de seguridad y sin SLA de alta disponibilidad. |
+| Base de datos | TiDB Cloud Starter, modo MySQL, límite de gasto en 0 | La cuota por instancia elegible incluye 5 GiB de almacenamiento por filas, 5 GiB columnar y 50 millones de Request Units mensuales. Si se agota la cuota, se bloquean las conexiones nuevas hasta el reinicio del período. Aiven MySQL Developer queda como opción MySQL de pago. |
 | Alternativa | Railway para la API y Aiven para MySQL, o Railway para ambos | El plan Hobby incluye USD 5 de uso contra la suscripción mensual y cobra el excedente. La plantilla MySQL de Railway usa un volumen persistente. Configurá copias, actualizaciones, TLS con identidad verificada y red privada. La plantilla requiere más operación que Aiven. |
 
-Precios y planes consultados el 24 de noviembre de 2026. Confirmá el costo final, regiones, salida de red y condiciones antes de contratar. Presupuestá desde USD 5/mes con API Free o desde USD 12/mes con API Starter y MySQL Developer, sujeto a los planes elegidos y cargos adicionales. Mantené API y MySQL geográficamente cerca. Usá las políticas de acceso al MySQL que admita el plan y autorizá la salida de red del backend cuando el proveedor permita restringirla. [Vercel Hobby](https://vercel.com/docs/plans/hobby), [Render Free](https://render.com/docs/free), [precios de Render](https://render.com/pricing), [Aiven MySQL](https://aiven.io/free-mysql-database-retired), [precios de Railway](https://docs.railway.com/pricing/plans), [MySQL en Railway](https://docs.railway.com/databases/mysql).
+La configuración TiDB Cloud Starter con límite de gasto en 0, Render Free y Vercel Hobby usa los niveles gratuitos de los tres proveedores. La cuota de TiDB se consultó el 26 de noviembre de 2026. Los demás planes se consultaron el 24 de noviembre de 2026. Elegí regiones cercanas para la API y la base y aplicá las restricciones de red que admita el plan. [Cuotas de TiDB Cloud Starter](https://docs.pingcap.com/tidbcloud/serverless-limitations/), [Vercel Hobby](https://vercel.com/docs/plans/hobby), [Render Free](https://render.com/docs/free), [Aiven MySQL](https://aiven.io/free-mysql-database-retired), [precios de Railway](https://docs.railway.com/pricing/plans).
 
 ## Requisitos y perfiles
 
@@ -23,7 +23,7 @@ Usá Java 21, el Maven Wrapper del repositorio, MySQL 8 compatible con Connector
 | `test` | H2 en memoria | Pruebas de servicios, MVC y seguridad. |
 | `migration` (pruebas) | MySQL aislado `hogwarts_library_migration_test` | Verifica que Liquibase e Hibernate arranquen sobre MySQL. |
 | `prod` | MySQL dedicado, conexión verificada por TLS | Cuentas gestionadas por el operador, con roles `ADMIN` y `EMPLEADO`. |
-| `demo` | MySQL dedicado al esquema `hogwarts_library_demo` | Inicio de sesión público sin contraseña y consultas explícitas con rol `DEMO`. |
+| `demo` | MySQL o TiDB Cloud Starter dedicados a `hogwarts_library_demo` | Inicio de sesión público sin contraseña y consultas explícitas con rol `DEMO`. |
 
 Seleccioná un perfil principal por entorno. `demo` y `prod` activan también `hosted`, que concentra la configuración común. Spring no carga los archivos `.env` automáticamente. Usá las variables del proveedor o exportalas en el shell. Vite sí lee sus archivos de entorno. Los ejemplos del repositorio usan dominios reservados y dejan los secretos vacíos.
 
@@ -47,20 +47,20 @@ Seleccioná un perfil principal por entorno. `demo` y `prod` activan también `h
 
 Generá una clave con `openssl rand -hex 32` y guardala en el gestor de secretos del proveedor. La rotación invalida los JWT ya emitidos, por lo que los visitantes deberán ingresar otra vez. Las variables `VITE_*` llegan al navegador. Reservalas para direcciones y opciones de interfaz.
 
-## 1. Preparar MySQL
+## 1. Preparar la base de demostración
 
-1. Creá un servicio MySQL dedicado a la demo y registrá host, puerto, versión y certificado de CA. En Railway, usá el host privado y un certificado válido para ese nombre si API y base comparten proyecto. Instalá la CA que firma el certificado.
-2. Creá el esquema vacío con una cuenta de administración de MySQL.
+1. Para TiDB Cloud Starter, seleccioná el modo **MySQL Compatible** y mantené el límite de gasto en 0. En **Connect**, copiá el hostname, puerto y nombre de usuario completos asignados por el proveedor. Usá la CA indicada allí si el truststore de Java no reconoce la cadena. Para MySQL administrado, tomá los datos equivalentes de su consola. [Crear una instancia Starter](https://docs.pingcap.com/tidbcloud/create-tidb-cluster-serverless/?plan=starter), [JDBC y TLS en TiDB](https://docs.pingcap.com/developer/dev-guide-sample-application-java-jdbc/).
+2. Creá el esquema vacío con una cuenta de administración. Si el esquema contiene la migración TiDB parcial, seguí primero el inventario y el procedimiento del [informe de compatibilidad](TIDB_COMPATIBILITY_REPORT.md).
 
    ```sql
    CREATE DATABASE hogwarts_library_demo CHARACTER SET utf8mb4;
    ```
 
-3. Creá un usuario de servicio exclusivo con alcance en `hogwarts_library_demo.*`. El proceso de arranque necesita crear y alterar las tablas e índices, agregar claves foráneas, ejecutar las migraciones DML, y mantener las tablas de control y bloqueo de Liquibase. Un grant del proveedor limitado a este esquema simplifica el primer arranque. La cuenta de administración de la instancia queda fuera del servicio.
+3. Creá un usuario de servicio exclusivo con alcance en `hogwarts_library_demo.*`. Otorgá los permisos de lectura y DML, creación y alteración de tablas, índices y `REFERENCES` que requiere Liquibase en ese esquema. Usá la cuenta de administración únicamente para preparar la base.
 4. Configurá `DB_URL` con el formato `jdbc:mysql://HOST:PUERTO/hogwarts_library_demo?sslMode=VERIFY_IDENTITY` y entregá usuario y contraseña por separado. Conservá el hostname del certificado. Si la CA es privada, instalala en el runtime como se indica abajo. Hikari usa hasta 5 conexiones por instancia, 1 ociosa mínima y esperas acotadas. Reservá conexiones para el arranque simultáneo durante un despliegue y para mantenimiento. [Propiedades TLS de Connector/J](https://dev.mysql.com/doc/connector-j/en/connector-j-connp-props-security.html).
 5. Activá o confirmá las copias de seguridad del proveedor y registrá el procedimiento de restauración. MySQL proporciona persistencia. Las réplicas de la API pueden compartir la misma base de demostración.
 
-Al arrancar con `demo`, el changelog valida que el motor sea MySQL y que el esquema se llame `hogwarts_library_demo`. Ejecuta las migraciones 001 a 003 y, solo si las tablas de negocio están vacías, registra `demo-001-fictitious-library`. El bloqueo de Liquibase coordina arranques concurrentes y el historial impide repetir la carga registrada. Hibernate valida el esquema en hosting. Los datos incluyen seis ejemplares con tres estados, cuatro alquileres, una devolución, una cancelación, un anticipo y un alquiler saldado. Las fechas se calculan durante la carga inicial y quedan fijas.
+Al arrancar con `demo`, Liquibase comprueba que Connector/J identifique el motor como MySQL y que el esquema se llame exactamente `hogwarts_library_demo`. Las migraciones 001 a 003 crean los índices de las tablas hijas antes de agregar las claves foráneas. La carga `demo-001-fictitious-library` exige tablas de negocio vacías y el historial impide repetirla. Hibernate valida el esquema en hosting. Los datos incluyen seis ejemplares con tres estados, cuatro alquileres, una devolución, una cancelación, un anticipo y un alquiler saldado. Las fechas se calculan durante la carga inicial y quedan fijas. Completá el primer arranque y el reinicio sobre TiDB antes de publicar. [Validación pendiente sobre TiDB Cloud](TIDB_COMPATIBILITY_REPORT.md#validación-y-reinicio-de-spring-boot).
 
 ## 2. Validar antes de publicar
 
