@@ -77,6 +77,19 @@ Para iniciar localmente, configurá opcionalmente `DEV_ADMIN_PASSWORD` y `DEV_EM
 
 Docker usa Java 21 en dos etapas con imágenes Eclipse Temurin fijadas por digest, Maven Wrapper con checksum verificado, un JRE y UID/GID 10001. El contexto admite únicamente fuentes y archivos de construcción. La construcción del contenedor empaqueta el JAR. La compilación, la suite y las migraciones de prueba se validan con `mvn verify` antes de construir el contenedor.
 
+### Integridad de Maven Wrapper en Docker
+
+La imagen base JDK Jammy fijada para `linux/amd64` carece de `unzip` según su inventario SPDX. En un build limpio, Maven Wrapper 3.3.4 cambia la descarga de Maven 3.9.16 de ZIP a TAR.GZ cuando falta ese ejecutable y aplica al TAR.GZ el SHA-256 configurado para el ZIP. Así falla `dependency:go-offline` durante el arranque del wrapper. El Dockerfile instala `unzip` exclusivamente en `build`, antes de invocar el wrapper, para descargar y validar el ZIP. [Capas de la imagen oficial](https://hub.docker.com/layers/library/eclipse-temurin/21-jdk-jammy/images/sha256-4e38bcd64a552586921cdd011831cabc0d56c4f7c950aa460c0b9e03237871ed?tab=layers).
+
+Los SHA-256 se calcularon sobre los binarios del archivo de Apache tras cotejar ambos SHA-512 publicados. [SHA-512 del ZIP](https://archive.apache.org/dist/maven/maven-3/3.9.16/binaries/apache-maven-3.9.16-bin.zip.sha512), [SHA-512 del TAR.GZ](https://archive.apache.org/dist/maven/maven-3/3.9.16/binaries/apache-maven-3.9.16-bin.tar.gz.sha512).
+
+| Distribución Maven 3.9.16 | SHA-256 |
+| --- | --- |
+| `apache-maven-3.9.16-bin.zip` | `5af3b743dd8b876b5c45da33b676251e5f1687712644abb4ee519ca56e1d89ce` |
+| `apache-maven-3.9.16-bin.tar.gz` | `80ffca22aed9e8b9713a232f3394fd81d7f20322df75efdb2b047dbd3e3a23bb` |
+
+El ZIP coincide con `distributionSha256Sum`. `mvnw` y `docker/entrypoint.sh` tienen finales LF previstos por `.gitattributes`, tanto en Git como en el checkout revisado. `dependency:go-offline` se completó en Windows con una caché nueva y el almacén de confianza del sistema. Con Java 21 y solo `src/main`, `compile jar:jar spring-boot:repackage` produjo un JAR con `JarLauncher`, la clase de aplicación y Connector/J en `BOOT-INF`. `mvnw.cmd -o -B -ntp verify` pasó las 74 pruebas con MySQL 8.0.43 aislado. El host de esta corrección carece de Docker. El build de la imagen, su arranque y el consumo real quedan por verificar.
+
 ```sh
 docker build -t hogwarts-library:demo-candidate .
 docker run --rm --name hogwarts-library-demo --env-file .env.demo \
@@ -95,6 +108,12 @@ Creá `.env.demo` localmente a partir de `.env.example`, con un MySQL demo alcan
 4. Desplegá. Revisá los logs de conexión TLS, changelogs aplicados y arranque de Tomcat. Comprobá desde fuera `GET /healthz` con HTTP 200 y `{"status":"UP"}`. Una base inaccesible o una app que no acepta tráfico devuelve 503 y `{"status":"DOWN"}`. El endpoint solo devuelve estado. [Web Services](https://render.com/docs/web-services), [health checks](https://render.com/docs/health-checks), [variables y archivos secretos](https://render.com/docs/configure-environment-variables).
 
 En Railway, conectá el mismo Dockerfile como API, definí las mismas variables, generá el dominio HTTPS, configurá `/healthz` y ajustá los recursos de ejecución. Si montás la CA desde un archivo o configurás el truststore por otro mecanismo, verificá TLS desde el runtime real. [Spring Boot en Railway](https://docs.railway.com/guides/spring-boot), [health checks en Railway](https://docs.railway.com/deployments/healthchecks).
+
+### Volver a desplegar el fix en Render Free
+
+1. Revisá y publicá manualmente la corrección en `feature/v2.2.1-hardening`. Confirmá que el Web Service use esa rama, el runtime Docker y `./Dockerfile` desde la raíz. Dejá que Render asigne `PORT` y conservá el perfil `demo`, las variables existentes y el JDBC con `sslMode=VERIFY_IDENTITY`.
+2. En el servicio, elegí **Manual Deploy → Clear build cache & deploy**. Confirmá el SHA publicado y comprobá en los logs que se instale `unzip` y se completen `dependency:go-offline` y `spring-boot:repackage`. [Despliegues manuales de Render](https://render.com/docs/deploys#manual-deploys).
+3. Confirmá HTTP 200 y `{"status":"UP"}` en `/healthz`. Verificá un JWT demo, una lectura autenticada y un rechazo HTTP 403 para una escritura. Observá la memoria durante el arranque y el primer acceso. Con 512 MB y `MaxRAMPercentage=50`, el heap máximo esperado ronda 256 MB. La memoria total también incluye JVM, hilos y buffers.
 
 ## 4. Publicar Vue en Vercel
 

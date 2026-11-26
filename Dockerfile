@@ -1,5 +1,9 @@
 FROM eclipse-temurin:21-jdk-jammy@sha256:b2711c65970c1227197c29c46e669bfdbb137524e9da0e664703a140ec25a040 AS build
 WORKDIR /workspace
+# El SHA-256 del Maven Wrapper corresponde al ZIP.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends unzip \
+    && rm -rf /var/lib/apt/lists/*
 COPY .mvn/wrapper/maven-wrapper.properties .mvn/wrapper/maven-wrapper.properties
 COPY mvnw pom.xml ./
 RUN sh ./mvnw -B -ntp dependency:go-offline

@@ -1,6 +1,6 @@
 # Estado de preparación de Hogwarts Library
 
-**Rama candidata** `feature/v2.2.1-hardening`, a partir de `f249008`. El trabajo se realizó en el workspace y requiere revisión antes de publicarse.
+**Rama candidata** `feature/v2.2.1-hardening`. La auditoría inicial partió de `f249008`. La corrección de Docker se preparó sobre `b0d64f1`.
 
 ## TiDB Cloud Starter
 
@@ -8,7 +8,21 @@ La opción gratuita para la demo combina TiDB Cloud Starter en modo MySQL con l�
 
 La verificación local con MySQL 8.0.43 pasó 74 pruebas. El JAR arrancó sobre el historial MySQL previo, conservó los 14 registros y ejecutó cero changesets. En MySQL demo vacío, el primer arranque aplicó 15 y el siguiente cero. Se comprobaron las ocho claves foráneas, la ausencia de índices duplicados, Hibernate `validate`, TLS, la carga ficticia, el JWT demo, el bloqueo de escrituras y `/healthz`.
 
-Quedan pendientes el inventario de solo lectura del esquema TiDB parcial, su recuperación autorizada y los dos arranques sobre TiDB Cloud. El entorno de validación carecía de los datos de conexión remota. El informe incluye las consultas, los criterios para decidir si el esquema puede vaciarse y los comandos de arranque. [Informe de compatibilidad con TiDB](TIDB_COMPATIBILITY_REPORT.md).
+La validación posterior informada sobre TiDB Cloud Starter aplicó 15 changesets y confirmó el arranque de Hibernate, los datos ficticios, `/healthz` en `UP`, la emisión del JWT, las lecturas REST y el rechazo HTTP 403 de escrituras demo. Queda pendiente repetir el smoke test desde el contenedor desplegado en Render. [Informe de compatibilidad con TiDB](TIDB_COMPATIBILITY_REPORT.md).
+
+## Corrección del build Docker en Render
+
+El SHA-256 fijado corresponde al ZIP de Maven 3.9.16. Ambos binarios oficiales se cotejaron contra sus SHA-512 publicados. Para el digest base fijado, el inventario SPDX de `linux/amd64` incluye `wget` y `coreutils` y carece de `unzip`. Sin `unzip`, `mvnw` selecciona el TAR.GZ, cuyo SHA-256 difiere, y aborta antes de invocar Maven. `Dockerfile` instala `unzip` solo en `build` y conserva la validación SHA-256. [Hashes y procedimiento de despliegue](DEPLOYMENT_GUIDE.md#integridad-de-maven-wrapper-en-docker), [imagen oficial](https://hub.docker.com/layers/library/eclipse-temurin/21-jdk-jammy/images/sha256-4e38bcd64a552586921cdd011831cabc0d56c4f7c950aa460c0b9e03237871ed?tab=layers).
+
+| Validación | Resultado |
+| --- | --- |
+| Maven Wrapper POSIX con cachés vacías, usando los binarios oficiales ya descargados | Sin `unzip`, seleccionó TAR.GZ y reprodujo el error SHA-256. Con `unzip`, validó el ZIP y ejecutó Maven 3.9.16 sobre Java 21. |
+| Scripts y contexto Docker | `sh -n` pasó para `mvnw` y `docker/entrypoint.sh`. Se comprobó LF en ambos y que `.dockerignore` permite las entradas de compilación. `mvnw.cmd` usa el ZIP y verifica su hash antes de extraerlo. |
+| Suite Java 21 y MySQL 8.0.43 local aislado | `mvnw.cmd -o -B -ntp verify` pasó 74 pruebas, con 0 fallos, errores u omisiones. |
+| Precarga de dependencias | `dependency:go-offline` pasó con una caché nueva en Windows. La JVM usó el almacén de confianza de Windows para acceder a Maven Central. |
+| Empaquetado del Dockerfile reproducido localmente | `compile jar:jar spring-boot:repackage` produjo `library-1.0.0.jar` con `JarLauncher`, la aplicación y Connector/J en `BOOT-INF`. |
+| Configuración de la etapa final | Revisión estática del JRE 21 fijado por digest, UID/GID 10001, `MaxRAMPercentage=50`, `PORT`, perfil `demo` con `hosted`, Connector/J con `VERIFY_IDENTITY`, CA opcional y `/healthz` como ruta indicada para el health check de Render. |
+| Imagen y despliegue | Docker no está disponible en este host. Quedan pendientes el build y arranque de la imagen en Linux, la verificación de memoria con 512 MB y el smoke test con TiDB desde Render. |
 
 ## Auditoría inicial
 
@@ -63,15 +77,15 @@ El endpoint público `GET /healthz` verifica disponibilidad de Spring y acceso a
 ## Riesgos y publicación
 
 1. Validá la imagen con Docker antes de publicar. Comprobá el consumo de memoria del proceso y el arranque con el límite del plan elegido.
-2. Revisá la versión de `feature/v2.2.1-hardening`. Prepará el esquema exclusivo `hogwarts_library_demo` con credenciales dedicadas y TLS. En TiDB, completá el inventario y verificá ambos arranques antes de publicar. [Guía de despliegue](DEPLOYMENT_GUIDE.md), [recuperación de TiDB](TIDB_COMPATIBILITY_REPORT.md#recuperar-el-esquema-parcial).
+2. Revisá la versión de `feature/v2.2.1-hardening` y usá el esquema `hogwarts_library_demo` ya validado. Confirmá los datos de conexión y TLS desde Render. [Guía de despliegue](DEPLOYMENT_GUIDE.md#volver-a-desplegar-el-fix-en-render-free).
 3. Desplegá la API Docker con perfil `demo`, el CA correspondiente y `/healthz` como health check. Luego publicá Vite en Vercel apuntando al backend HTTPS y autorizá el origen exacto de Vercel en la API.
 4. Revisá el primer arranque, una recarga de rutas y los rechazos de escrituras del rol demo sobre la URL pública. Controlá memoria, conexiones y latencia. Render Free puede tardar alrededor de un minuto en reactivar el servicio. El frontend señala la espera y permite reintentar. La aplicación no incorpora un limitador distribuido y el tráfico abusivo puede consumir capacidad de la API o de MySQL. Un límite perimetral puede cubrir ese riesgo cuando se configure el dominio definitivo.
 5. Verificá la URL pública antes de enlazarla desde el portfolio. Las ilustraciones PNG existentes suman aproximadamente 23 MB en el build completo y pueden penalizar la primera visita con una red lenta. Se conserva el material visual existente.
 
-La corrección está en el workspace. La instancia TiDB informada está pendiente de recuperar y validar antes de publicar una URL de demo.
+La corrección de Docker está en el workspace. La verificación del build y del arranque en Render queda pendiente de publicar el cambio en la rama enlazada.
 
 Mensaje de commit sugerido
 
 ```
-fix(liquibase): ensure MySQL and TiDB migration compatibility
+fix(docker): ensure Maven Wrapper distribution integrity on Linux
 ```
