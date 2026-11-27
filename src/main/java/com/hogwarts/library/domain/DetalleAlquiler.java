@@ -2,16 +2,18 @@ package com.hogwarts.library.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 
 import java.math.BigDecimal;
 
 @Entity
+@Filter(name = LibraryScope.LEGACY_FILTER)
 @Table(
         name = "detalle_alquiler",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_detalle_alquiler_ejemplar",
-                        columnNames = {"alquiler_id", "ejemplar_id"}
+                        name = "uk_detalle_alquiler_s_pair",
+                        columnNames = {"scope_id", "alquiler_id", "ejemplar_id"}
                 )
         }
 )
@@ -25,6 +27,10 @@ public class DetalleAlquiler {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "scope_id", nullable = false, updatable = false)
+    @Builder.Default
+    private long scopeId = LibraryScope.LEGACY_ID;
 
     @Column(
             name = "precio_dia",

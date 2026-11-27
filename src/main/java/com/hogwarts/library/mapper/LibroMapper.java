@@ -70,8 +70,7 @@ public class LibroMapper {
         libro.setAnioPublicacion(request.anioPublicacion());
         libro.setDescripcion(normalizarNullable(request.descripcion()));
         libro.setCategoria(categoria);
-        libro.getAutores().clear();
-        libro.getAutores().addAll(autores);
+        libro.setAutores(autores);
     }
 
     private String normalizar(String valor) {

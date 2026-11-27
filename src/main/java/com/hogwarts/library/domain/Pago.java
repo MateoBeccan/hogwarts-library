@@ -3,11 +3,13 @@ package com.hogwarts.library.domain;
 import com.hogwarts.library.domain.enums.MetodoPago;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
+@Filter(name = LibraryScope.LEGACY_FILTER)
 @Table(name = "pago")
 @Getter
 @Setter
@@ -19,6 +21,10 @@ public class Pago {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "scope_id", nullable = false, updatable = false)
+    @Builder.Default
+    private long scopeId = LibraryScope.LEGACY_ID;
 
     @Column(nullable = false)
     private LocalDateTime fecha;

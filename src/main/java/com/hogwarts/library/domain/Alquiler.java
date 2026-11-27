@@ -3,6 +3,7 @@ package com.hogwarts.library.domain;
 import com.hogwarts.library.domain.enums.EstadoAlquiler;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@Filter(name = LibraryScope.LEGACY_FILTER)
 @Table(name = "alquiler")
 @Getter
 @Setter
@@ -21,6 +23,10 @@ public class Alquiler {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "scope_id", nullable = false, updatable = false)
+    @Builder.Default
+    private long scopeId = LibraryScope.LEGACY_ID;
 
     @Column(name = "fecha_alquiler", nullable = false)
     private LocalDate fechaAlquiler;
@@ -63,4 +69,13 @@ public class Alquiler {
     )
     @Builder.Default
     private List<Pago> pagos = new ArrayList<>();
+
+    public void agregarDetalle(DetalleAlquiler detalle) {
+        if (detalle.getEjemplar().getScopeId() != scopeId) {
+            throw new IllegalArgumentException("El ejemplar pertenece a otro ámbito");
+        }
+        detalle.setScopeId(scopeId);
+        detalle.setAlquiler(this);
+        detalles.add(detalle);
+    }
 }

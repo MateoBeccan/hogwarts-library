@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - preConditions:
+      - dbms:
+          type: mysql
+      - sqlCheck:
+          expectedResult: 1
+          sql: SELECT IF(BINARY DATABASE() = 'hogwarts_library_demo', 1, 0)
+  - include:
+      file: db/changelog/db.changelog-demo.yaml
+  - include:
+      file: db/changelog/changes/004-scoped-foundation.yaml

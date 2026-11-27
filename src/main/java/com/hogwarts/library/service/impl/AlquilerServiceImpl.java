@@ -95,8 +95,6 @@ public class AlquilerServiceImpl implements AlquilerService {
                 normalizarNullable(request.observaciones())
         );
 
-        List<DetalleAlquiler> detalles = new ArrayList<>();
-
         BigDecimal total = BigDecimal.ZERO;
 
         for (Ejemplar ejemplar : ejemplares) {
@@ -109,7 +107,6 @@ public class AlquilerServiceImpl implements AlquilerService {
 
             DetalleAlquiler detalle = new DetalleAlquiler();
 
-            detalle.setAlquiler(alquiler);
             detalle.setEjemplar(ejemplar);
 
             // Snapshot histórico.
@@ -117,14 +114,13 @@ public class AlquilerServiceImpl implements AlquilerService {
             detalle.setCantidadDias(cantidadDias);
             detalle.setSubtotal(subtotal);
 
-            detalles.add(detalle);
+            alquiler.agregarDetalle(detalle);
 
             total = total.add(subtotal);
 
             ejemplar.setEstado(EstadoEjemplar.ALQUILADO);
         }
 
-        alquiler.setDetalles(detalles);
         alquiler.setTotal(total);
 
         Alquiler guardado = alquilerRepository.save(alquiler);

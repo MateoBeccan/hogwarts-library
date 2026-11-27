@@ -1,0 +1,823 @@
+databaseChangeLog:
+  - preConditions:
+      - dbms:
+          type: mysql
+      - sqlCheck:
+          expectedResult: 1
+          sql: SELECT @@SESSION.foreign_key_checks
+
+  - changeSet:
+      id: 004-create-scope
+      author: hogwarts-library
+      runInTransaction: false
+      preConditions:
+        - onFail: HALT
+        - sqlCheck:
+            expectedResult: 1
+            sql: |
+              SELECT @@SESSION.foreign_key_checks
+      changes:
+        - sql:
+            sql: |
+              CREATE TABLE library_scope (
+                  id BIGINT NOT NULL AUTO_INCREMENT,
+                  tipo VARCHAR(12) NOT NULL,
+                  public_id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin,
+                  created_at DATETIME(6) NOT NULL,
+                  expires_at DATETIME(6),
+                  closed_at DATETIME(6),
+                  generacion INT NOT NULL DEFAULT 0,
+                  fecha_negocio DATE,
+                  version_semilla VARCHAR(32),
+                  mutaciones INT NOT NULL DEFAULT 0,
+                  restauraciones INT NOT NULL DEFAULT 0,
+                  ultima_restauracion_at DATETIME(6),
+                  PRIMARY KEY (id),
+                  UNIQUE KEY uk_scope_public_id (public_id),
+                  KEY idx_scope_expiry (tipo, expires_at, id),
+                  KEY idx_scope_closed (tipo, closed_at, id)
+              ) ENGINE=InnoDB
+
+  - changeSet:
+      id: 004-reserve-legacy
+      author: hogwarts-library
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO library_scope (id, tipo, created_at) VALUES (1, 'LEGACY', UTC_TIMESTAMP(6))
+
+  - changeSet:
+      id: 004-column-categoria
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE categoria ADD COLUMN scope_id BIGINT NULL
+
+  - changeSet:
+      id: 004-column-autor
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE autor ADD COLUMN scope_id BIGINT NULL
+
+  - changeSet:
+      id: 004-column-libro
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE libro ADD COLUMN scope_id BIGINT NULL
+
+  - changeSet:
+      id: 004-column-libro_autor
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE libro_autor ADD COLUMN scope_id BIGINT NULL
+
+  - changeSet:
+      id: 004-column-cliente
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE cliente ADD COLUMN scope_id BIGINT NULL
+
+  - changeSet:
+      id: 004-column-ejemplar
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE ejemplar ADD COLUMN scope_id BIGINT NULL
+
+  - changeSet:
+      id: 004-column-alquiler
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE alquiler ADD COLUMN scope_id BIGINT NULL
+
+  - changeSet:
+      id: 004-column-detalle_alquiler
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE detalle_alquiler ADD COLUMN scope_id BIGINT NULL
+
+  - changeSet:
+      id: 004-column-pago
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE pago ADD COLUMN scope_id BIGINT NULL
+
+  - changeSet:
+      id: 004-column-secuencia_codigo
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE secuencia_codigo ADD COLUMN scope_id BIGINT NULL
+
+  - changeSet:
+      id: 004-backfill-legacy
+      author: hogwarts-library
+      changes:
+        - sql:
+            sql: |
+              UPDATE categoria SET scope_id = 1 WHERE scope_id IS NULL;
+              UPDATE autor SET scope_id = 1 WHERE scope_id IS NULL;
+              UPDATE libro SET scope_id = 1 WHERE scope_id IS NULL;
+              UPDATE libro_autor SET scope_id = 1 WHERE scope_id IS NULL;
+              UPDATE cliente SET scope_id = 1 WHERE scope_id IS NULL;
+              UPDATE ejemplar SET scope_id = 1 WHERE scope_id IS NULL;
+              UPDATE alquiler SET scope_id = 1 WHERE scope_id IS NULL;
+              UPDATE detalle_alquiler SET scope_id = 1 WHERE scope_id IS NULL;
+              UPDATE pago SET scope_id = 1 WHERE scope_id IS NULL;
+              UPDATE secuencia_codigo SET scope_id = 1 WHERE scope_id IS NULL;
+
+  - changeSet:
+      id: 004-verify-backfill
+      author: hogwarts-library
+      preConditions:
+        - onFail: HALT
+        - sqlCheck:
+            expectedResult: 1
+            sql: |
+              SELECT COUNT(*) FROM library_scope WHERE id = 1 AND tipo = 'LEGACY'
+        - sqlCheck:
+            expectedResult: 1
+            sql: |
+              SELECT COUNT(*) FROM secuencia_codigo WHERE scope_id = 1 AND nombre = 'EJEMPLAR'
+        - sqlCheck:
+            expectedResult: 0
+            sql: |
+              SELECT (SELECT COUNT(*) FROM categoria WHERE scope_id IS NULL OR scope_id <> 1)
+                   + (SELECT COUNT(*) FROM autor WHERE scope_id IS NULL OR scope_id <> 1)
+                   + (SELECT COUNT(*) FROM libro WHERE scope_id IS NULL OR scope_id <> 1)
+                   + (SELECT COUNT(*) FROM libro_autor WHERE scope_id IS NULL OR scope_id <> 1)
+                   + (SELECT COUNT(*) FROM cliente WHERE scope_id IS NULL OR scope_id <> 1)
+                   + (SELECT COUNT(*) FROM ejemplar WHERE scope_id IS NULL OR scope_id <> 1)
+                   + (SELECT COUNT(*) FROM alquiler WHERE scope_id IS NULL OR scope_id <> 1)
+                   + (SELECT COUNT(*) FROM detalle_alquiler WHERE scope_id IS NULL OR scope_id <> 1)
+                   + (SELECT COUNT(*) FROM pago WHERE scope_id IS NULL OR scope_id <> 1)
+                   + (SELECT COUNT(*) FROM secuencia_codigo WHERE scope_id IS NULL OR scope_id <> 1)
+        - sqlCheck:
+            expectedResult: 0
+            sql: |
+              SELECT (SELECT COUNT(*) FROM libro c
+                    LEFT JOIN categoria p ON p.id = c.categoria_id AND p.scope_id = c.scope_id WHERE p.id IS NULL)
+                   + (SELECT COUNT(*) FROM libro_autor c
+                    LEFT JOIN libro p ON p.id = c.libro_id AND p.scope_id = c.scope_id WHERE p.id IS NULL)
+                   + (SELECT COUNT(*) FROM libro_autor c
+                    LEFT JOIN autor p ON p.id = c.autor_id AND p.scope_id = c.scope_id WHERE p.id IS NULL)
+                   + (SELECT COUNT(*) FROM ejemplar c
+                    LEFT JOIN libro p ON p.id = c.libro_id AND p.scope_id = c.scope_id WHERE p.id IS NULL)
+                   + (SELECT COUNT(*) FROM alquiler c
+                    LEFT JOIN cliente p ON p.id = c.cliente_id AND p.scope_id = c.scope_id WHERE p.id IS NULL)
+                   + (SELECT COUNT(*) FROM detalle_alquiler c
+                    LEFT JOIN alquiler p ON p.id = c.alquiler_id AND p.scope_id = c.scope_id WHERE p.id IS NULL)
+                   + (SELECT COUNT(*) FROM detalle_alquiler c
+                    LEFT JOIN ejemplar p ON p.id = c.ejemplar_id AND p.scope_id = c.scope_id WHERE p.id IS NULL)
+                   + (SELECT COUNT(*) FROM pago c
+                    LEFT JOIN alquiler p ON p.id = c.alquiler_id AND p.scope_id = c.scope_id WHERE p.id IS NULL)
+      changes:
+        - sql:
+            sql: |
+              SELECT 1
+
+  - changeSet:
+      id: 004-required-categoria
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE categoria MODIFY COLUMN scope_id BIGINT NOT NULL
+
+  - changeSet:
+      id: 004-required-autor
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE autor MODIFY COLUMN scope_id BIGINT NOT NULL
+
+  - changeSet:
+      id: 004-required-libro
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE libro MODIFY COLUMN scope_id BIGINT NOT NULL
+
+  - changeSet:
+      id: 004-required-libro_autor
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE libro_autor MODIFY COLUMN scope_id BIGINT NOT NULL
+
+  - changeSet:
+      id: 004-required-cliente
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE cliente MODIFY COLUMN scope_id BIGINT NOT NULL
+
+  - changeSet:
+      id: 004-required-ejemplar
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE ejemplar MODIFY COLUMN scope_id BIGINT NOT NULL
+
+  - changeSet:
+      id: 004-required-alquiler
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE alquiler MODIFY COLUMN scope_id BIGINT NOT NULL
+
+  - changeSet:
+      id: 004-required-detalle_alquiler
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE detalle_alquiler MODIFY COLUMN scope_id BIGINT NOT NULL
+
+  - changeSet:
+      id: 004-required-pago
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE pago MODIFY COLUMN scope_id BIGINT NOT NULL
+
+  - changeSet:
+      id: 004-required-secuencia_codigo
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE secuencia_codigo MODIFY COLUMN scope_id BIGINT NOT NULL
+
+  - changeSet:
+      id: 004-scope-key-categoria
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE categoria ADD UNIQUE KEY uk_categoria_scope_id (scope_id, id)
+
+  - changeSet:
+      id: 004-scope-key-autor
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE autor ADD UNIQUE KEY uk_autor_scope_id (scope_id, id)
+
+  - changeSet:
+      id: 004-scope-key-libro
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE libro ADD UNIQUE KEY uk_libro_scope_id (scope_id, id)
+
+  - changeSet:
+      id: 004-scope-key-cliente
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE cliente ADD UNIQUE KEY uk_cliente_scope_id (scope_id, id)
+
+  - changeSet:
+      id: 004-scope-key-ejemplar
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE ejemplar ADD UNIQUE KEY uk_ejemplar_scope_id (scope_id, id)
+
+  - changeSet:
+      id: 004-scope-key-alquiler
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE alquiler ADD UNIQUE KEY uk_alquiler_scope_id (scope_id, id)
+
+  - changeSet:
+      id: 004-scope-key-detalle_alquiler
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE detalle_alquiler ADD UNIQUE KEY uk_detalle_alquiler_scope_id (scope_id, id)
+
+  - changeSet:
+      id: 004-scope-key-pago
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE pago ADD UNIQUE KEY uk_pago_scope_id (scope_id, id)
+
+  - changeSet:
+      id: 004-index-libro-categoria
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              CREATE INDEX idx_libro_s_categoria ON libro (scope_id, categoria_id)
+
+  - changeSet:
+      id: 004-index-libro_autor-libro
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              CREATE INDEX idx_libro_autor_s_libro ON libro_autor (scope_id, libro_id)
+
+  - changeSet:
+      id: 004-index-libro_autor-autor
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              CREATE INDEX idx_libro_autor_s_autor ON libro_autor (scope_id, autor_id)
+
+  - changeSet:
+      id: 004-index-ejemplar-libro
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              CREATE INDEX idx_ejemplar_s_libro ON ejemplar (scope_id, libro_id)
+
+  - changeSet:
+      id: 004-index-alquiler-cliente
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              CREATE INDEX idx_alquiler_s_cliente ON alquiler (scope_id, cliente_id)
+
+  - changeSet:
+      id: 004-index-detalle_alquiler-alquiler
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              CREATE INDEX idx_detalle_alquiler_s_alquiler ON detalle_alquiler (scope_id, alquiler_id)
+
+  - changeSet:
+      id: 004-index-detalle_alquiler-ejemplar
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              CREATE INDEX idx_detalle_alquiler_s_ejemplar ON detalle_alquiler (scope_id, ejemplar_id)
+
+  - changeSet:
+      id: 004-index-pago-alquiler
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              CREATE INDEX idx_pago_s_alquiler ON pago (scope_id, alquiler_id, fecha, id)
+
+  - changeSet:
+      id: 004-unique-categoria-nombre
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE categoria ADD UNIQUE KEY uk_categoria_s_nombre (scope_id, nombre)
+
+  - changeSet:
+      id: 004-unique-autor-nombre_completo
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE autor ADD UNIQUE KEY uk_autor_s_nombre_completo (scope_id, nombre_completo)
+
+  - changeSet:
+      id: 004-unique-libro-isbn
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE libro ADD UNIQUE KEY uk_libro_s_isbn (scope_id, isbn)
+
+  - changeSet:
+      id: 004-unique-cliente-dni
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE cliente ADD UNIQUE KEY uk_cliente_s_dni (scope_id, dni)
+
+  - changeSet:
+      id: 004-unique-ejemplar-codigo
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE ejemplar ADD UNIQUE KEY uk_ejemplar_s_codigo (scope_id, codigo)
+
+  - changeSet:
+      id: 004-unique-libro_autor-pair
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE libro_autor ADD UNIQUE KEY uk_libro_autor_s_pair (scope_id, libro_id, autor_id)
+
+  - changeSet:
+      id: 004-unique-detalle_alquiler-pair
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE detalle_alquiler ADD UNIQUE KEY uk_detalle_alquiler_s_pair (scope_id, alquiler_id, ejemplar_id)
+
+  - changeSet:
+      id: 004-fk-categoria-scope
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE categoria ADD CONSTRAINT fk_categoria_scope FOREIGN KEY (scope_id) REFERENCES library_scope (id)
+
+  - changeSet:
+      id: 004-fk-autor-scope
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE autor ADD CONSTRAINT fk_autor_scope FOREIGN KEY (scope_id) REFERENCES library_scope (id)
+
+  - changeSet:
+      id: 004-fk-libro-scope
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE libro ADD CONSTRAINT fk_libro_scope FOREIGN KEY (scope_id) REFERENCES library_scope (id)
+
+  - changeSet:
+      id: 004-fk-libro_autor-scope
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE libro_autor ADD CONSTRAINT fk_libro_autor_scope FOREIGN KEY (scope_id) REFERENCES library_scope (id)
+
+  - changeSet:
+      id: 004-fk-cliente-scope
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE cliente ADD CONSTRAINT fk_cliente_scope FOREIGN KEY (scope_id) REFERENCES library_scope (id)
+
+  - changeSet:
+      id: 004-fk-ejemplar-scope
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE ejemplar ADD CONSTRAINT fk_ejemplar_scope FOREIGN KEY (scope_id) REFERENCES library_scope (id)
+
+  - changeSet:
+      id: 004-fk-alquiler-scope
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE alquiler ADD CONSTRAINT fk_alquiler_scope FOREIGN KEY (scope_id) REFERENCES library_scope (id)
+
+  - changeSet:
+      id: 004-fk-detalle_alquiler-scope
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE detalle_alquiler ADD CONSTRAINT fk_detalle_alquiler_scope FOREIGN KEY (scope_id) REFERENCES library_scope (id)
+
+  - changeSet:
+      id: 004-fk-pago-scope
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE pago ADD CONSTRAINT fk_pago_scope FOREIGN KEY (scope_id) REFERENCES library_scope (id)
+
+  - changeSet:
+      id: 004-fk-libro-categoria
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE libro ADD CONSTRAINT fk_libro_s_categoria FOREIGN KEY (scope_id, categoria_id) REFERENCES categoria (scope_id, id)
+
+  - changeSet:
+      id: 004-fk-libro_autor-libro
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE libro_autor ADD CONSTRAINT fk_libro_autor_s_libro FOREIGN KEY (scope_id, libro_id) REFERENCES libro (scope_id, id)
+
+  - changeSet:
+      id: 004-fk-libro_autor-autor
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE libro_autor ADD CONSTRAINT fk_libro_autor_s_autor FOREIGN KEY (scope_id, autor_id) REFERENCES autor (scope_id, id)
+
+  - changeSet:
+      id: 004-fk-ejemplar-libro
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE ejemplar ADD CONSTRAINT fk_ejemplar_s_libro FOREIGN KEY (scope_id, libro_id) REFERENCES libro (scope_id, id)
+
+  - changeSet:
+      id: 004-fk-alquiler-cliente
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE alquiler ADD CONSTRAINT fk_alquiler_s_cliente FOREIGN KEY (scope_id, cliente_id) REFERENCES cliente (scope_id, id)
+
+  - changeSet:
+      id: 004-fk-detalle_alquiler-alquiler
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE detalle_alquiler ADD CONSTRAINT fk_detalle_alquiler_s_alquiler FOREIGN KEY (scope_id, alquiler_id) REFERENCES alquiler (scope_id, id)
+
+  - changeSet:
+      id: 004-fk-detalle_alquiler-ejemplar
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE detalle_alquiler ADD CONSTRAINT fk_detalle_alquiler_s_ejemplar FOREIGN KEY (scope_id, ejemplar_id) REFERENCES ejemplar (scope_id, id)
+
+  - changeSet:
+      id: 004-fk-pago-alquiler
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE pago ADD CONSTRAINT fk_pago_s_alquiler FOREIGN KEY (scope_id, alquiler_id) REFERENCES alquiler (scope_id, id)
+
+  # Rebuild the sequence without dropping its old, potentially clustered PK.
+  # Preserve nombre's historical collation using metadata in the creation statement.
+  - changeSet:
+      id: 004-create-sequence-stage
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              SET @sequence_ddl = (
+                  SELECT CONCAT('CREATE TABLE secuencia_codigo_004 (scope_id BIGINT NOT NULL, nombre VARCHAR(50) CHARACTER SET ',
+                                CHARACTER_SET_NAME, ' COLLATE ', COLLATION_NAME,
+                                ' NOT NULL, ultimo_valor BIGINT NOT NULL, PRIMARY KEY (scope_id, nombre)) ENGINE=InnoDB')
+                  FROM information_schema.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'secuencia_codigo' AND COLUMN_NAME = 'nombre'
+              );
+              PREPARE sequence_ddl FROM @sequence_ddl;
+              EXECUTE sequence_ddl;
+              DEALLOCATE PREPARE sequence_ddl;
+
+  - changeSet:
+      id: 004-sequence-stage-fk
+      author: hogwarts-library
+      runInTransaction: false
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE secuencia_codigo_004 ADD CONSTRAINT fk_secuencia_codigo_scope FOREIGN KEY (scope_id) REFERENCES library_scope (id)
+
+  - changeSet:
+      id: 004-copy-sequence-stage
+      author: hogwarts-library
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO secuencia_codigo_004 (scope_id, nombre, ultimo_valor)
+              SELECT scope_id, nombre, ultimo_valor FROM secuencia_codigo
+
+  - changeSet:
+      id: 004-switch-sequence
+      author: hogwarts-library
+      runInTransaction: false
+      preConditions:
+        - onFail: HALT
+        - sqlCheck:
+            expectedResult: 0
+            sql: |
+              SELECT (SELECT COUNT(*) FROM secuencia_codigo) <> (SELECT COUNT(*) FROM secuencia_codigo_004)
+                   OR EXISTS (
+                       SELECT 1 FROM secuencia_codigo old_seq
+                       LEFT JOIN secuencia_codigo_004 new_seq
+                           ON new_seq.scope_id = old_seq.scope_id AND new_seq.nombre = old_seq.nombre
+                       WHERE new_seq.nombre IS NULL OR new_seq.ultimo_valor <> old_seq.ultimo_valor
+                   )
+      changes:
+        - sql:
+            sql: |
+              RENAME TABLE secuencia_codigo TO secuencia_codigo_pre004, secuencia_codigo_004 TO secuencia_codigo
+
+  - changeSet:
+      id: 004-retire-global-categoria-nombre
+      author: hogwarts-library
+      runInTransaction: false
+      preConditions:
+        - onFail: HALT
+        - sqlCheck:
+            expectedResult: 1
+            sql: |
+              SELECT IF(COUNT(*) = 2 AND GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) = 'scope_id,nombre', 1, 0)
+              FROM information_schema.STATISTICS
+              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'categoria'
+                AND INDEX_NAME = 'uk_categoria_s_nombre' AND NON_UNIQUE = 0
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE categoria DROP INDEX uk_categoria_nombre
+
+  - changeSet:
+      id: 004-retire-global-autor-nombre_completo
+      author: hogwarts-library
+      runInTransaction: false
+      preConditions:
+        - onFail: HALT
+        - sqlCheck:
+            expectedResult: 1
+            sql: |
+              SELECT IF(COUNT(*) = 2 AND GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) = 'scope_id,nombre_completo', 1, 0)
+              FROM information_schema.STATISTICS
+              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'autor'
+                AND INDEX_NAME = 'uk_autor_s_nombre_completo' AND NON_UNIQUE = 0
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE autor DROP INDEX uk_autor_nombre_completo
+
+  - changeSet:
+      id: 004-retire-global-libro-isbn
+      author: hogwarts-library
+      runInTransaction: false
+      preConditions:
+        - onFail: HALT
+        - sqlCheck:
+            expectedResult: 1
+            sql: |
+              SELECT IF(COUNT(*) = 2 AND GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) = 'scope_id,isbn', 1, 0)
+              FROM information_schema.STATISTICS
+              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'libro'
+                AND INDEX_NAME = 'uk_libro_s_isbn' AND NON_UNIQUE = 0
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE libro DROP INDEX uk_libro_isbn
+
+  - changeSet:
+      id: 004-retire-global-cliente-dni
+      author: hogwarts-library
+      runInTransaction: false
+      preConditions:
+        - onFail: HALT
+        - sqlCheck:
+            expectedResult: 1
+            sql: |
+              SELECT IF(COUNT(*) = 2 AND GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) = 'scope_id,dni', 1, 0)
+              FROM information_schema.STATISTICS
+              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cliente'
+                AND INDEX_NAME = 'uk_cliente_s_dni' AND NON_UNIQUE = 0
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE cliente DROP INDEX uk_cliente_dni
+
+  - changeSet:
+      id: 004-retire-global-ejemplar-codigo
+      author: hogwarts-library
+      runInTransaction: false
+      preConditions:
+        - onFail: HALT
+        - sqlCheck:
+            expectedResult: 1
+            sql: |
+              SELECT IF(COUNT(*) = 2 AND GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) = 'scope_id,codigo', 1, 0)
+              FROM information_schema.STATISTICS
+              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ejemplar'
+                AND INDEX_NAME = 'uk_ejemplar_s_codigo' AND NON_UNIQUE = 0
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE ejemplar DROP INDEX uk_ejemplar_codigo
+
+  - changeSet:
+      id: 004-verify-integrity
+      author: hogwarts-library
+      preConditions:
+        - onFail: HALT
+        - sqlCheck:
+            expectedResult: 1
+            sql: |
+              SELECT @@SESSION.foreign_key_checks
+        - sqlCheck:
+            expectedResult: 18
+            sql: |
+              SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS
+              WHERE CONSTRAINT_SCHEMA = DATABASE()
+                AND CONSTRAINT_NAME IN ('fk_categoria_scope', 'fk_autor_scope', 'fk_libro_scope', 'fk_libro_autor_scope', 'fk_cliente_scope', 'fk_ejemplar_scope', 'fk_alquiler_scope', 'fk_detalle_alquiler_scope', 'fk_pago_scope', 'fk_secuencia_codigo_scope', 'fk_libro_s_categoria', 'fk_libro_autor_s_libro', 'fk_libro_autor_s_autor', 'fk_ejemplar_s_libro', 'fk_alquiler_s_cliente', 'fk_detalle_alquiler_s_alquiler', 'fk_detalle_alquiler_s_ejemplar', 'fk_pago_s_alquiler')
+      changes:
+        - sql:
+            sql: |
+              SELECT 1
